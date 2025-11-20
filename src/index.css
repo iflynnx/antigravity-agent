@@ -84,9 +84,7 @@
   @apply flex items-center gap-2 transition-all duration-200;
 }
 
-.toolbar-title:hover {
-  @apply transform scale-105;
-}
+/* 移除悬停放大效果，避免干扰长按操作 */
 
 .toolbar-actions {
   @apply flex items-center gap-3 flex-wrap;

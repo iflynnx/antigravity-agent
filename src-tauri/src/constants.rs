@@ -59,9 +59,7 @@ pub mod paths {
     /// 配置目录名称
     pub const CONFIG_DIR_NAME: &str = ".antigravity-agent";
 
-    /// 账户备份子目录
-    pub const ACCOUNTS_DIR: &str = "antigravity-accounts";
-
+    
     /// 窗口状态文件
     pub const WINDOW_STATE_FILE: &str = "window_state.json";
 }

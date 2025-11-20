@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use rusqlite::Connection;
+use log::LevelFilter;
 
 /// Antigravity 清理模块
 mod antigravity_cleanup;
@@ -37,6 +38,9 @@ mod constants;
 
 /// 配置管理器模块
 mod config_manager;
+
+/// 工具模块
+mod utils;
 
 /// 命令模块
 mod commands;
@@ -75,7 +79,12 @@ use crate::commands::{
     // 最后2个有依赖的函数
     restore_antigravity_account,
     switch_to_antigravity_account,
-};
+    // 日志导出命令
+    export_logs,
+    get_log_content,
+    get_log_info,
+    clear_logs,
+    };
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ProfileInfo {
@@ -150,6 +159,9 @@ impl Default for AppState {
 fn main() {
     println!("🚀 启动 Antigravity Agent");
 
+    // 记录系统启动信息
+    crate::utils::log_decorator::log_system_info();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -158,6 +170,17 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .manage(AppState::default())
         .setup(|app| {
+            // 初始化简单日志记录器
+            let log_dir = dirs::config_dir()
+                .unwrap_or_else(|| std::path::PathBuf::from("."))
+                .join("antigravity-agent")
+                .join("logs");
+            fs::create_dir_all(&log_dir).ok();
+
+            simple_logging::log_to_file(
+                log_dir.join("antigravity-agent.log"),
+                LevelFilter::Info,
+            ).ok();
             // 初始化窗口事件处理器
             if let Err(e) = window_event_handler::init_window_event_handler(app) {
                 eprintln!("⚠️  窗口事件处理器初始化失败: {}", e);
@@ -201,7 +224,11 @@ fn main() {
             restore_from_tray,
             is_system_tray_enabled,
             save_system_tray_state,
-            get_system_tray_state
+            get_system_tray_state,
+            export_logs,
+            get_log_content,
+            get_log_info,
+            clear_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

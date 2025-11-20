@@ -6,6 +6,7 @@
 import { ConfigImportManager } from './config-import-manager';
 import { ConfigExportHandler } from './config-export-handler';
 import { defaultEncryptionProvider } from './encryption-provider';
+import { AntigravityService } from '../antigravity-service';
 import type {
   ConfigImportResult,
   ConfigExportResult,
@@ -116,8 +117,6 @@ export class ConfigExportManager {
    * @returns 备份列表
    */
   private async getBackupList(): Promise<string[]> {
-    // 动态导入 AntigravityService 以避免循环依赖
-    const { AntigravityService } = await import('../antigravity-service');
     return AntigravityService.getBackupList();
   }
 

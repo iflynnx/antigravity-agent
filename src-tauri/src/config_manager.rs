@@ -23,11 +23,7 @@ impl ConfigManager {
         Ok(Self { config_dir })
     }
 
-    /// 获取账户备份目录
-    pub fn accounts_dir(&self) -> PathBuf {
-        self.config_dir.join(paths::ACCOUNTS_DIR)
-    }
-
+    
     /// 获取窗口状态文件路径
     pub fn window_state_file(&self) -> PathBuf {
         self.config_dir.join(paths::WINDOW_STATE_FILE)

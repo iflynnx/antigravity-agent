@@ -5,6 +5,7 @@ import { TooltipProvider } from './ui/tooltip';
 import ToolbarTitle from './ui/toolbar-title';
 import ToolbarActions from './toolbar-actions';
 import SystemTraySwitch from './ui/system-tray-switch';
+import { SilentLogExport } from './SilentLogExport';
 import { usePasswordDialog } from '../hooks/use-password-dialog';
 import { useUpdateChecker } from '../hooks/useUpdateChecker';
 import { SystemTrayService } from '../services/system-tray-service';

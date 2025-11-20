@@ -6,6 +6,7 @@ import ManageSection from './components/ManageSection';
 import StatusNotification from './components/StatusNotification';
 import Toolbar from './components/Toolbar';
 import { TooltipProvider } from './components/ui/tooltip';
+import { useDevToolsShortcut } from './hooks/useDevToolsShortcut';
 
 interface Status {
   message: string;
@@ -16,6 +17,9 @@ function App() {
   const [backups, setBackups] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>({ message: '', isError: false });
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 启用开发者工具快捷键 (Shift+Ctrl+I)
+  useDevToolsShortcut();
 
   const showStatus = (message: string, isError: boolean = false): void => {
     setStatus({ message, isError });

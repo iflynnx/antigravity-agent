@@ -23,7 +23,7 @@ use crate::constants::database;
 /// - `Ok((backup_name, is_overwrite))`: 备份文件名和是否为覆盖操作
 /// - `Err(message)`: 错误信息
 pub fn smart_backup_antigravity_account(email: &str) -> Result<(String, bool), String> {
-    println!("🔧 执行智能备份（完整 Marker 模式），邮箱: {}", email);
+    log::info!("🔧 执行智能备份（完整 Marker 模式），邮箱: {}", email);
 
     let config_dir = dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
