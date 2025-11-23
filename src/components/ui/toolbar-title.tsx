@@ -1,5 +1,4 @@
 import React from 'react';
-import { Shield } from 'lucide-react';
 import UpdateBadge from '../UpdateBadge';
 import { SilentLogExport } from '../SilentLogExport';
 import { UpdateState, DownloadProgress } from '../../services/updateService';

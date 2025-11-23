@@ -21,10 +21,18 @@ pub mod tray_commands;
 // 日志相关命令
 pub mod logging_commands;
 
+// 应用设置命令
+pub mod settings_commands;
+
+// 数据库监控命令
+pub mod db_monitor_commands;
+
 // 重新导出所有命令，保持与 main.rs 的兼容性
 pub use account_commands::*;
 pub use backup_commands::*;
+pub use db_monitor_commands::*;
 pub use logging_commands::*;
 pub use platform_commands::*;
 pub use process_commands::*;
+pub use settings_commands::*;
 pub use tray_commands::*;

@@ -4,11 +4,14 @@ import { usePasswordDialog } from './hooks/use-password-dialog';
 import { useBackupManagement } from './hooks/use-backup-management';
 import { useConfigManager } from './hooks/use-config-manager';
 import { useAntigravityProcess } from './hooks/use-antigravity-process';
-import ManageSection from './components/ManageSection';
+import { useAutoDatabaseListener } from './hooks/useDatabaseListener';
+import { invoke } from '@tauri-apps/api/core';
+import { useDatabaseStore } from './stores/databaseStore';
+import BusinessManageSection from './components/business/ManageSection';
 import StatusNotification from './components/StatusNotification';
 import Toolbar from './components/Toolbar';
 import AntigravityPathDialog from './components/AntigravityPathDialog';
-import SettingsDialog from './components/SettingsDialog';
+import BusinessSettingsDialog from './components/business/SettingsDialog';
 import PasswordDialog from './components/PasswordDialog';
 import { TooltipProvider } from './components/ui/tooltip';
 import { AntigravityPathService } from './services/antigravity-path-service';
@@ -32,6 +35,29 @@ function App() {
 
   // ========== Hook 集成 ==========
   useDevToolsShortcut();
+
+  // 自动数据库监听（需要根据设置状态启动）
+  useAutoDatabaseListener();
+
+  // 加载并同步数据库监控设置
+  const { setAutoRefreshEnabled } = useDatabaseStore();
+
+  React.useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        // 加载数据库监控设置
+        const dbMonitoringEnabled = await invoke<boolean>('is_db_monitoring_enabled');
+        setAutoRefreshEnabled(dbMonitoringEnabled);
+        console.log('📋 数据库监控设置已同步:', dbMonitoringEnabled);
+      } catch (error) {
+        console.error('加载监控设置失败:', error);
+        // 使用默认值
+        setAutoRefreshEnabled(true);
+      }
+    };
+
+    loadSettings();
+  }, [setAutoRefreshEnabled]);
 
   // 状态提示
   const showStatus = useCallback((message: string, isError: boolean = false): void => {
@@ -167,7 +193,7 @@ function App() {
       />
 
       <div className="container">
-        <ManageSection
+        <BusinessManageSection
           backups={backups}
           showStatus={showStatus}
           onRefresh={refreshBackupList}
@@ -191,7 +217,7 @@ function App() {
         validatePassword={passwordDialog.validatePassword}
       />
 
-      <SettingsDialog
+      <BusinessSettingsDialog
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
       />

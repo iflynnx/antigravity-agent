@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Download, Upload } from 'lucide-react';
-import UpdateDialog from './UpdateDialog';
-import ConfirmDialog from './ConfirmDialog';
+import BusinessUpdateDialog from './business/UpdateDialog';
+import BusinessConfirmDialog from './business/ConfirmDialog';
+import BusinessActionButton from './business/ActionButton';
 import { TooltipProvider } from './ui/tooltip';
 import ToolbarTitle from './ui/toolbar-title';
 import SystemTraySwitch from './ui/system-tray-switch';
-import ActionButton from './ui/action-button';
 import { SilentLogExport } from './SilentLogExport';
 import { useUpdateChecker } from '../hooks/useUpdateChecker';
 import { useSystemTray } from '../hooks/useSystemTray';
@@ -194,9 +194,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
               </button>
 
               {/* 操作按钮 */}
-              <ActionButton
+              <BusinessActionButton
                 onClick={handleBackupAndRestartClick}
-                variant="primary"
+                variant="default"
                 icon={<Plus className="h-4 w-4" />}
                 tooltip="关闭 Antigravity，备份当前用户，清除用户信息，并自动重新启动"
                 isLoading={loadingState.isProcessLoading}
@@ -204,9 +204,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 isAnyLoading={isAnyLoading}
               >
                 登录新账户
-              </ActionButton>
+              </BusinessActionButton>
 
-              <ActionButton
+              <BusinessActionButton
                 onClick={onImport}
                 variant="secondary"
                 icon={<Upload className="h-4 w-4" />}
@@ -216,9 +216,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 isAnyLoading={isAnyLoading}
               >
                 导入
-              </ActionButton>
+              </BusinessActionButton>
 
-              <ActionButton
+              <BusinessActionButton
                 onClick={onExport}
                 variant="secondary"
                 icon={<Download className="h-4 w-4" />}
@@ -229,7 +229,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 isAnyLoading={isAnyLoading}
               >
                 导出
-              </ActionButton>
+              </BusinessActionButton>
 
               {/* 设置按钮 */}
               {onSettingsClick && (
@@ -258,7 +258,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
       </div>
 
       {/* 确认对话框 */}
-      <ConfirmDialog
+      <BusinessConfirmDialog
         isOpen={confirmDialog.isOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -276,7 +276,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
   
       {/* 更新对话框 */}
-      <UpdateDialog
+      <BusinessUpdateDialog
         isOpen={isUpdateDialogOpen}
         onClose={() => setIsUpdateDialogOpen(false)}
         state={updateState}

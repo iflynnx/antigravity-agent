@@ -1,12 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
+use tauri::{AppHandle, Manager, Emitter};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use log::LevelFilter;
 use rusqlite::Connection;
@@ -50,6 +51,9 @@ mod utils;
 /// Antigravity 路径配置模块
 mod antigravity_path_config;
 
+/// 数据库监控模块
+mod db_monitor;
+
 /// 命令模块
 mod commands;
 
@@ -85,6 +89,13 @@ use crate::commands::{
     get_system_tray_state,
     is_system_tray_enabled,
     toggle_system_tray,
+    is_db_monitoring_enabled,
+    save_db_monitoring_state,
+    get_all_settings,
+    // db_monitor_commands
+    is_database_monitoring_running,
+    start_database_monitoring,
+    stop_database_monitoring,
     // process_commands
     kill_antigravity,
     is_antigravity_running,  // 新增
@@ -234,6 +245,16 @@ fn main() {
                 Err(e) => println!("⚠️ [setup] 系统托盘管理器初始化失败: {}", e),
             }
 
+            // 初始化数据库监控器
+            println!("🔧 [setup] 开始初始化数据库监控器...");
+            let db_monitor = Arc::new(db_monitor::DatabaseMonitor::new(app.handle().clone()));
+            app.manage(db_monitor.clone());
+
+            // 数据库监控将在前端通过命令启动，避免在 setup 中使用 tokio::spawn
+            println!("ℹ️ [setup] 数据库监控将根据前端设置自动启动");
+
+            println!("✅ [setup] 数据库监控器初始化完成");
+
             // 初始化窗口事件处理器
             println!("🔧 [setup] 初始化窗口事件处理器...");
             if let Err(e) = window_event_handler::init_window_event_handler(app) {
@@ -287,6 +308,13 @@ fn main() {
             save_system_tray_state,
             get_system_tray_state,
             toggle_system_tray,
+            is_db_monitoring_enabled,
+            save_db_monitoring_state,
+            get_all_settings,
+            // 数据库监控命令
+            is_database_monitoring_running,
+            start_database_monitoring,
+            stop_database_monitoring,
             export_logs,
             get_log_content,
             get_log_info,

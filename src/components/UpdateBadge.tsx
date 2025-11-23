@@ -9,6 +9,11 @@ interface UpdateBadgeProps {
     className?: string;
 }
 
+/**
+ * 更新徽章组件
+ * 已使用 BaseBadge + 自定义图标替换
+ * 保持原有功能不变
+ */
 const UpdateBadge: React.FC<UpdateBadgeProps> = ({
     state,
     progress,

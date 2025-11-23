@@ -12,12 +12,15 @@ use crate::config_manager::ConfigManager;
 pub struct AppSettings {
     /// 是否启用系统托盘
     pub system_tray_enabled: bool,
+    /// 是否启用数据库监控
+    pub db_monitoring_enabled: bool,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
             system_tray_enabled: false, // 默认不启用，避免打扰用户
+            db_monitoring_enabled: true, // 默认启用数据库监控
         }
     }
 }
