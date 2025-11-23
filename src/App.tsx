@@ -36,6 +36,7 @@ function App() {
   };
 
   const refreshBackupList = async (skipAutoBackup: boolean = false): Promise<void> => {
+    console.log('🔄 [刷新] 开始刷新备份列表, skipAutoBackup:', skipAutoBackup);
     try {
       // 1. 首先获取当前的备份列表
       let existingBackups: string[] = [];
@@ -49,6 +50,7 @@ function App() {
       // 如果 skipAutoBackup 为 true，则跳过此步骤
       let autoBackedUp = false;
       if (!skipAutoBackup) {
+        console.log('📦 [刷新] 尝试自动备份当前账户');
         try {
           // 注意：智能备份可以在进程运行时进行（只读数据库）
           const currentInfo = await invoke('get_current_antigravity_info');
@@ -98,16 +100,20 @@ function App() {
         showStatus('刷新成功', false);
       }
     } catch (error) {
+      console.error('❌ [刷新] 获取备份列表失败:', error);
       showStatus(`获取备份列表失败: ${error}`, true);
     }
   };
 
   const handleRefresh = async (): Promise<void> => {
+    console.log('🔘 [按钮] 点击刷新按钮');
     setIsRefreshing(true);
     try {
       // 正确：刷新按钮应该触发智能备份，然后刷新列表
       await refreshBackupList(false);
+      console.log('✅ [按钮] 刷新完成');
     } catch (error) {
+      console.error('❌ [按钮] 刷新失败:', error);
       showStatus(`刷新失败: ${error}`, true);
     } finally {
       setIsRefreshing(false);

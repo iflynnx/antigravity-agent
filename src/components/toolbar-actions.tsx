@@ -275,19 +275,6 @@ const ToolbarActions: React.FC<ToolbarActionsProps> = ({
             导出
           </span>
         </ToolbarButton>
-
-        <ToolbarButton
-          onClick={onRefresh}
-          isLoading={isRefreshing}
-          loadingText="刷新中..."
-          tooltip="刷新所有数据"
-          isAnyLoading={isAnyLoading}
-        >
-          <span className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            刷新
-          </span>
-        </ToolbarButton>
       </div>
 
       <ConfirmDialog
