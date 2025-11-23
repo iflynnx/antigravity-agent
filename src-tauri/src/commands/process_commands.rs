@@ -13,6 +13,12 @@ pub async fn start_antigravity() -> Result<String, String> {
     crate::antigravity_starter::start_antigravity()
 }
 
+/// 检查 Antigravity 进程是否正在运行
+#[tauri::command]
+pub async fn is_antigravity_running() -> bool {
+    crate::platform_utils::is_antigravity_running()
+}
+
 /// 备份并重启 Antigravity
 #[tauri::command]
 pub async fn backup_and_restart_antigravity() -> Result<String, String> {

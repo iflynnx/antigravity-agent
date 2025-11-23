@@ -80,6 +80,7 @@ use crate::commands::{
     is_system_tray_enabled,
     // process_commands
     kill_antigravity,
+    is_antigravity_running,  // 新增
     list_backups,
     minimize_to_tray,
     // 最后2个有依赖的函数
@@ -237,6 +238,7 @@ fn main() {
             clear_all_antigravity_data,
             // 进程管理命令
             kill_antigravity,
+            is_antigravity_running,  // 新增
             start_antigravity,
             backup_and_restart_antigravity,
             // 平台支持命令

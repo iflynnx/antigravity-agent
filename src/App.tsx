@@ -146,7 +146,7 @@ function App() {
       {/* 设置对话框 */}
       <SettingsDialog
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onOpenChange={setIsSettingsOpen}
       />
     </TooltipProvider>
   );

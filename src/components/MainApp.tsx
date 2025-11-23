@@ -83,103 +83,6 @@ export function MainApp() {
 
     return (
         <TooltipProvider>
-            <style>{`
-        .DialogOverlay {
-          position: fixed;
-          inset: 0;
-          background-color: rgba(0, 0, 0, 0.5);
-          z-index: 50;
-        }
-
-        .DialogContent {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background-color: rgb(31, 41, 55);
-          padding: 1.5rem;
-          border-radius: 0.5rem;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-          max-width: 28rem;
-          z-index: 50;
-        }
-
-        .DialogTitle {
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-        }
-
-        .DialogDescription {
-          color: rgb(209, 213, 219);
-          margin-bottom: 1rem;
-        }
-
-        .Button {
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
-          transition: all 0.2s;
-          cursor: pointer;
-          border: none;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .Button--secondary {
-          background-color: rgb(55, 65, 81);
-          color: white;
-        }
-
-        .Button--secondary:hover:not(:disabled) {
-          background-color: rgb(75, 85, 99);
-        }
-
-        .Button--danger {
-          background-color: rgb(220, 38, 38);
-          color: white;
-        }
-
-        .Button--danger:hover:not(:disabled) {
-          background-color: rgb(185, 28, 28);
-        }
-
-        .Button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        /* Radix UI base animation classes */
-        @keyframes overlayShow {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes contentShow {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -48%) scale(0.96);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-          }
-        }
-
-        .DialogOverlay {
-          animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .DialogContent {
-          animation: contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-      `}</style>
-
             <>
                 <Toolbar
                     onRefresh={handleRefresh}
@@ -211,7 +114,7 @@ export function MainApp() {
 
                 <SettingsDialog
                     isOpen={isSettingsOpen}
-                    onClose={() => setIsSettingsOpen(false)}
+                    onOpenChange={setIsSettingsOpen}
                 />
             </>
         </TooltipProvider>

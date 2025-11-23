@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Settings, X } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { AntigravityPathService } from '../services/antigravity-path-service';
 
 interface SettingsDialogProps {
     isOpen: boolean;
-    onClose: () => void;
+    onOpenChange: (open: boolean) => void;
 }
 
-const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
+const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onOpenChange }) => {
     const [dataPath, setDataPath] = useState<string>('');
     const [execPath, setExecPath] = useState<string>('');
     const [newDataPath, setNewDataPath] = useState<string>('');
@@ -130,7 +132,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
 
             setMessage('✅ 设置已保存');
             setTimeout(() => {
-                onClose();
+                onOpenChange(false);
             }, 1000);
         } catch (error) {
             setMessage(`❌ 保存失败: ${error}`);
@@ -139,97 +141,119 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
         }
     };
 
-    if (!isOpen) return null;
+    const handleClose = () => {
+        // 重置状态
+        setNewDataPath('');
+        setNewExecPath('');
+        setMessage('');
+        onOpenChange(false);
+    };
 
     const hasChanges = (newDataPath && isDataPathValid) || (newExecPath && isExecPathValid);
 
     return (
-        <div className="DialogOverlay">
-            <div className="DialogContent" style={{ maxWidth: '600px' }}>
-                <div className="DialogTitle">设置</div>
+        <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50" />
+                <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] z-50 max-h-[90vh] overflow-y-auto">
+                    <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-white p-6 pb-4 flex items-center gap-3">
+                        <Settings className="h-5 w-5 text-antigravity-blue" />
+                        设置
+                    </Dialog.Title>
 
-                {isLoading ? (
-                    <div className="text-center py-8">加载中...</div>
-                ) : (
-                    <>
-                        {/* 数据库路径 */}
-                        <div className="mb-6">
-                            <h3 className="text-sm font-semibold text-white mb-2">
-                                数据库路径
-                            </h3>
-                            <div className="text-xs bg-gray-700 p-3 rounded mb-2 break-all">
-                                {dataPath}
+                    {isLoading ? (
+                        <div className="text-center py-8 text-gray-600 dark:text-gray-400">加载中...</div>
+                    ) : (
+                        <div className="px-6 pb-6">
+                            {/* 数据库路径 */}
+                            <div className="mb-6">
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                                    数据库路径
+                                </h3>
+                                <div className="text-xs bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mb-2 break-all text-gray-700 dark:text-gray-300">
+                                    {dataPath}
+                                </div>
+                                <button
+                                    onClick={handleBrowseDataPath}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 font-medium w-full"
+                                >
+                                    修改数据库路径
+                                </button>
+                                {newDataPath && (
+                                    <div className="mt-2 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                        <div className="text-gray-600 dark:text-gray-400 mb-1">新路径：</div>
+                                        <div className="break-all text-gray-800 dark:text-gray-200">{newDataPath}</div>
+                                        {isDataPathValid && (
+                                            <div className="text-green-600 dark:text-green-400 mt-1">✅ 有效</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <button
-                                onClick={handleBrowseDataPath}
-                                disabled={isSaving}
-                                className="Button Button--secondary w-full"
-                            >
-                                修改数据库路径
-                            </button>
-                            {newDataPath && (
-                                <div className="mt-2 text-xs bg-gray-800 p-2 rounded">
-                                    <div className="text-gray-400 mb-1">新路径：</div>
-                                    <div className="break-all">{newDataPath}</div>
-                                    {isDataPathValid && (
-                                        <div className="text-green-400 mt-1">✅ 有效</div>
-                                    )}
+
+                            {/* 可执行文件路径 */}
+                            <div className="mb-6">
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                                    可执行文件路径
+                                </h3>
+                                <div className="text-xs bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mb-2 break-all text-gray-700 dark:text-gray-300">
+                                    {execPath}
+                                </div>
+                                <button
+                                    onClick={handleBrowseExecPath}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 font-medium w-full"
+                                >
+                                    修改可执行文件路径
+                                </button>
+                                {newExecPath && (
+                                    <div className="mt-2 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                        <div className="text-gray-600 dark:text-gray-400 mb-1">新路径：</div>
+                                        <div className="break-all text-gray-800 dark:text-gray-200">{newExecPath}</div>
+                                        {isExecPathValid && (
+                                            <div className="text-green-600 dark:text-green-400 mt-1">✅ 有效</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {message && (
+                                <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                    <p className="text-sm text-gray-800 dark:text-gray-200">{message}</p>
                                 </div>
                             )}
-                        </div>
 
-                        {/* 可执行文件路径 */}
-                        <div className="mb-6">
-                            <h3 className="text-sm font-semibold text-white mb-2">
-                                可执行文件路径
-                            </h3>
-                            <div className="text-xs bg-gray-700 p-3 rounded mb-2 break-all">
-                                {execPath}
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={handleClose}
+                                    disabled={isSaving}
+                                    className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 font-medium"
+                                >
+                                    关闭
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={!hasChanges || isSaving}
+                                    className="flex-1 px-4 py-3 bg-antigravity-blue text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                                >
+                                    {isSaving ? '保存中...' : '保存'}
+                                </button>
                             </div>
-                            <button
-                                onClick={handleBrowseExecPath}
-                                disabled={isSaving}
-                                className="Button Button--secondary w-full"
-                            >
-                                修改可执行文件路径
-                            </button>
-                            {newExecPath && (
-                                <div className="mt-2 text-xs bg-gray-800 p-2 rounded">
-                                    <div className="text-gray-400 mb-1">新路径：</div>
-                                    <div className="break-all">{newExecPath}</div>
-                                    {isExecPathValid && (
-                                        <div className="text-green-400 mt-1">✅ 有效</div>
-                                    )}
-                                </div>
-                            )}
                         </div>
+                    )}
 
-                        {message && (
-                            <div className="mb-4 p-2 bg-gray-800 border border-gray-600 rounded">
-                                <p className="text-sm">{message}</p>
-                            </div>
-                        )}
-
-                        <div className="flex gap-2">
-                            <button
-                                onClick={onClose}
-                                disabled={isSaving}
-                                className="Button Button--secondary flex-1"
-                            >
-                                关闭
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={!hasChanges || isSaving}
-                                className="Button bg-blue-600 hover:bg-blue-700 text-white flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isSaving ? '保存中...' : '保存'}
-                            </button>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
+                    <Dialog.Close asChild>
+                        <button
+                            onClick={handleClose}
+                            className="absolute right-4 top-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                            aria-label="关闭"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </Dialog.Close>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 };
 

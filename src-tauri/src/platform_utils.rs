@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::Command;
 
 /// 获取Antigravity应用数据目录（跨平台）
 pub fn get_antigravity_data_dir() -> Option<PathBuf> {
@@ -113,57 +112,58 @@ pub fn get_all_antigravity_db_paths() -> Vec<PathBuf> {
     db_paths
 }
 
-/// 关闭Antigravity进程
+/// 关闭Antigravity进程 - 使用sysinfo库实现跨平台统一处理
 pub fn kill_antigravity_processes() -> Result<String, String> {
-    match std::env::consts::OS {
-        "windows" => {
-            // Windows: 尝试多种可能的进程名
-            let process_names = vec!["Antigravity.exe", "Antigravity"];
-            let mut last_error = String::new();
+    log::info!("🔍 开始搜索并关闭 Antigravity 进程");
 
-            for process_name in process_names {
-                let output = Command::new("taskkill")
-                    .args(["/F", "/IM", process_name])
-                    .output()
-                    .map_err(|e| format!("执行taskkill命令失败: {}", e))?;
+    // 使用sysinfo库获取所有进程
+    let mut system = sysinfo::System::new_all();
+    system.refresh_all();
 
-                if output.status.success() {
-                    return Ok(format!("已成功关闭Antigravity进程 ({})", process_name));
-                } else {
-                    last_error = format!(
-                        "关闭进程 {} 失败: {:?}",
-                        process_name,
-                        String::from_utf8_lossy(&output.stderr)
-                    );
-                }
+    let mut killed_processes = Vec::new();
+
+    // 遍历所有进程，查找名为 "Antigravity" 的进程
+    for (pid, process) in system.processes() {
+        let process_name = process.name();
+
+        // 精确匹配进程名 "Antigravity" (区分大小写)
+        if process_name == "Antigravity" {
+            log::info!("🎯 找到目标进程: {} (PID: {})", process_name, pid);
+
+            // 尝试终止进程
+            if process.kill() {
+                killed_processes.push(format!("Antigravity (PID: {})", pid));
+                log::info!("✅ 成功终止进程: {}", pid);
+            } else {
+                log::warn!("⚠️ 终止进程失败: {}", pid);
             }
-
-            Err(last_error)
         }
-        "macos" | "linux" => {
-            // macOS/Linux: 使用pkill命令，尝试多种进程名模式
-            let process_patterns = vec!["Antigravity", "antigravity"];
-            let mut last_error = String::new();
-
-            for pattern in process_patterns {
-                let output = Command::new("pkill")
-                    .args(["-f", pattern])
-                    .output()
-                    .map_err(|e| format!("执行pkill命令失败: {}", e))?;
-
-                if output.status.success() {
-                    return Ok(format!("已成功关闭Antigravity进程 (模式: {})", pattern));
-                } else {
-                    last_error = format!(
-                        "关闭进程失败 (模式: {}): {:?}",
-                        pattern,
-                        String::from_utf8_lossy(&output.stderr)
-                    );
-                }
-            }
-
-            Err(last_error)
-        }
-        _ => Err("不支持的操作系统".to_string()),
     }
+
+    if killed_processes.is_empty() {
+        log::info!("ℹ️ 未找到名为 'Antigravity' 的运行进程");
+        Err("未找到Antigravity进程".to_string())
+    } else {
+        let success_msg = format!("已成功关闭Antigravity进程: {}", killed_processes.join(", "));
+        log::info!("🎉 {}", success_msg);
+        Ok(success_msg)
+    }
+}
+
+/// 检查 Antigravity 进程是否正在运行（使用 sysinfo）
+pub fn is_antigravity_running() -> bool {
+    log::info!("🔍 检查 Antigravity 进程是否运行");
+
+    let mut system = sysinfo::System::new_all();
+    system.refresh_all();
+
+    for (pid, process) in system.processes() {
+        if process.name() == "Antigravity" {
+            log::info!("✅ 发现运行中的 Antigravity 进程 (PID: {})", pid);
+            return true;
+        }
+    }
+
+    log::info!("ℹ️ 未发现运行中的 Antigravity 进程");
+    false
 }

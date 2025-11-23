@@ -97,6 +97,7 @@ pub fn get_custom_executable_path() -> Result<Option<String>, String> {
 }
 
 /// 清除自定义路径配置
+#[allow(dead_code)]
 pub fn clear_custom_path() -> Result<(), String> {
     let config_file = get_config_file_path()?;
 

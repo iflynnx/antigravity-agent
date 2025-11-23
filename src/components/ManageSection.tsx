@@ -141,18 +141,20 @@ const ManageSection = ({ backups, showStatus, onRefresh, isInitialLoading = fals
       {/* Radix UI 确认对话框 - 清空所有 */}
       <Dialog.Root open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="DialogOverlay" />
-          <Dialog.Content className="DialogContent">
-            <Dialog.Title className="DialogTitle">确认清空所有备份</Dialog.Title>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] z-50">
+            <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white p-6 pb-4">
+              确认清空所有备份
+            </Dialog.Title>
 
-            <Dialog.Description className="DialogDescription">
+            <Dialog.Description className="text-sm text-gray-600 dark:text-gray-400 px-6 pb-6">
               此操作将永久删除所有 {backups.length} 个用户备份文件，且无法恢复。
               请确认您要继续此操作吗？
             </Dialog.Description>
 
-            <div className="flex gap-3 justify-end mt-6">
+            <div className="flex gap-3 p-6 pt-0 justify-end">
               <Dialog.Close asChild>
-                <button className="Button Button--secondary" disabled={isClearing}>
+                <button className="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 font-medium" disabled={isClearing}>
                   取消
                 </button>
               </Dialog.Close>
@@ -160,7 +162,7 @@ const ManageSection = ({ backups, showStatus, onRefresh, isInitialLoading = fals
               <button
                 onClick={confirmClearAllBackups}
                 disabled={isClearing}
-                className="Button Button--danger"
+                className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md flex items-center gap-2"
               >
                 {isClearing ? (
                   <>
@@ -179,18 +181,20 @@ const ManageSection = ({ backups, showStatus, onRefresh, isInitialLoading = fals
       {/* 单个删除确认对话框 */}
       <Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="DialogOverlay" />
-          <Dialog.Content className="DialogContent">
-            <Dialog.Title className="DialogTitle">确认删除备份</Dialog.Title>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 z-50" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] z-50">
+            <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white p-6 pb-4">
+              确认删除备份
+            </Dialog.Title>
 
-            <Dialog.Description className="DialogDescription">
+            <Dialog.Description className="text-sm text-gray-600 dark:text-gray-400 px-6 pb-6">
               确定要删除备份 "{backupToDelete}" 吗？
               此操作无法撤销。
             </Dialog.Description>
 
-            <div className="flex gap-3 justify-end mt-6">
+            <div className="flex gap-3 p-6 pt-0 justify-end">
               <Dialog.Close asChild>
-                <button className="Button Button--secondary" disabled={isDeleting}>
+                <button className="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 font-medium" disabled={isDeleting}>
                   取消
                 </button>
               </Dialog.Close>
@@ -198,7 +202,7 @@ const ManageSection = ({ backups, showStatus, onRefresh, isInitialLoading = fals
               <button
                 onClick={confirmDeleteBackup}
                 disabled={isDeleting}
-                className="Button Button--danger"
+                className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md flex items-center gap-2"
               >
                 {isDeleting ? (
                   <>
