@@ -18,7 +18,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # 第一步：删除旧 release 和 tag，创建新的 release
+  # 第一步：删除旧 release，创建新的 release
   prepare-release:
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +41,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: autobuild
-          name: 'Antigravity Agent Nightly'
+          name: 'Antigravity Agent Nightly (${{ github.event.head_commit.timestamp }})'
           body: |
             Nightly build from dev branch.
 
@@ -59,8 +59,8 @@ jobs:
             - **便携版**: `Antigravity-Agent-x86_64-Portable.zip` - 解压即用
 
             ### macOS
-            - **Apple Silicon**: `Antigravity Agent_aarch64.app.tar.gz`
-            - **Intel Mac**: `Antigravity Agent_x86_64.app.tar.gz`
+            - **Apple Silicon**: `Antigravity Agent_aarch64.dmg`
+            - **Intel Mac**: `Antigravity Agent_x86_64.dmg`
 
             ### Linux
             - **AppImage**: `antigravity-agent.AppImage.nightly` - 通用格式
@@ -74,18 +74,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 第二步：并行构建（release 已存在，不会冲突）
+  # 第二步：并行构建
   build:
-    needs: prepare-release  # 等待 release 准备好
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest  # Apple Silicon 原生构建
+          - platform: macos-latest
             arch: aarch64
             runs-on: macos-latest
             target: aarch64-apple-darwin
-          - platform: macos-latest  # Intel 构建使用 ARM runner 交叉编译
+          - platform: macos-latest
             arch: x86_64
             runs-on: macos-latest
             target: x86_64-apple-darwin
@@ -136,238 +136,297 @@ jobs:
           node-version: 'lts/*'
           cache: 'npm'
 
-      - name: Cache Vite build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/vite
-            node_modules/.cache
-          key: ${{ runner.os }}-vite-${{ github.run_number }}-autobuild
-          restore-keys: |
-            ${{ runner.os }}-vite-autobuild-
-
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Cache Tauri resources
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ github.workspace }}/src-tauri/target
-            ~/.cache/tauri
-          key: ${{ runner.os }}-tauri-${{ hashFiles('src-tauri/Cargo.lock') }}-${{ matrix.platform }}-autobuild
-          restore-keys: |
-            ${{ runner.os }}-tauri-autobuild-
+      - name: Show environment info
+        shell: bash
+        run: |
+          echo "=== Environment Information ==="
+          echo "Platform: ${{ matrix.platform }}"
+          echo "Architecture: ${{ matrix.arch }}"
+          echo "Target: ${{ matrix.target }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Current directory: $(pwd)"
+          echo "Node version: $(node --version)"
+          echo "Rust version: $(rustc --version)"
+          echo "Cargo version: $(cargo --version)"
+          echo "================================"
 
-      - name: Build Nightly app
-        uses: tauri-apps/tauri-action@v0
+      - name: Clean previous builds
+        shell: bash
+        run: |
+          # 清理之前的构建产物以确保干净构建
+          if [ "${{ matrix.platform }}" = "macos-latest" ]; then
+            rm -rf src-tauri/target/release/bundle
+          else
+            rm -rf src-tauri/target/${{ matrix.target }}/release/bundle
+          fi
+
+      - name: Build with Tauri
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: autobuild
-          releaseName: 'Antigravity Agent Nightly'
-          releaseBody: 'Nightly build from dev branch.'
-          releaseDraft: false
-          prerelease: true
-          includeDebug: false
-          includeRelease: false  # 禁用自动上传，我们将手动上传重命名后的文件
-          args: --target ${{ matrix.target }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          RUST_LOG: debug  # 启用详细日志以便调试
+        shell: bash
+        run: |
+          # 所有平台都使用 target 参数，避免 macOS aarch64 和 x86_64 相互覆盖
+          echo "Building for target ${{ matrix.target }}..."
+          npm run tauri:build -- --target ${{ matrix.target }} --verbose
+
+          # 检查构建产物
+          echo "=== Build completed. Checking build output ==="
+          echo "Current directory: $(pwd)"
+          echo "Contents of src-tauri/target/:"
+          ls -la src-tauri/target/ || echo "Directory not found"
+
+          if [ "${{ matrix.platform }}" = "macos-latest" ]; then
+            echo "Contents of src-tauri/target/release/:"
+            ls -la src-tauri/target/release/ || echo "Directory not found"
+            echo "Looking for bundle directory in release:"
+            find src-tauri/target/release -type d -name "*bundle*" 2>/dev/null || echo "No bundle found"
+          else
+            echo "Contents of src-tauri/target/${{ matrix.target }}/:"
+            ls -la src-tauri/target/${{ matrix.target }}/ || echo "Directory not found"
+            echo "Contents of src-tauri/target/${{ matrix.target }}/release/:"
+            ls -la src-tauri/target/${{ matrix.target }}/release/ || echo "Directory not found"
+            echo "Looking for bundle directory:"
+            find src-tauri/target/${{ matrix.target }}/release -type d -name "*bundle*" 2>/dev/null || echo "No bundle found"
+          fi
 
       - name: Remove version numbers from filenames
         shell: bash
         run: |
+          echo "=== Starting file rename process ==="
+
           # 获取构建产物目录
+          # 所有平台都使用 target triple
           BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          echo "Platform: ${{ matrix.platform }}, using target path: $BUNDLE_DIR"
+
+          echo "Expected bundle directory: $BUNDLE_DIR"
+
+          # 检查目录是否存在
+          if [ ! -d "$BUNDLE_DIR" ]; then
+            echo "❌ Bundle directory not found: $BUNDLE_DIR"
+            echo ""
+            echo "=== Debugging information ==="
+            echo "Searching for all bundle directories:"
+            find src-tauri/target -type d -name "bundle" 2>/dev/null || echo "No bundle directories found"
+            echo ""
+            echo "Full directory structure (first 30 lines):"
+            find src-tauri/target -type d 2>/dev/null | head -30
+            echo ""
+            echo "All target directories:"
+            ls -la src-tauri/target/ 2>/dev/null || echo "No target directory"
+            exit 1
+          else
+            echo "✅ Bundle directory found: $BUNDLE_DIR"
+            echo "Contents:"
+            ls -la "$BUNDLE_DIR"
+          fi
+
+          # macOS 处理 - 只处理 DMG 文件
+          if [ "${{ matrix.platform }}" = "macos-latest" ]; then
+            # dmg 文件
+            if [ -d "$BUNDLE_DIR/dmg" ]; then
+              cd "$BUNDLE_DIR/dmg/"
+              for file in *.dmg; do
+                if [ -f "$file" ]; then
+                  # 先检查文件名是否已经包含架构
+                  if echo "$file" | grep -q "_${{ matrix.arch }}"; then
+                    # 如果已经包含架构，只移除版本号
+                    new_name=$(echo "$file" | sed -E "s/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_(_${{ matrix.arch }})/Antigravity Agent\1/")
+                  else
+                    # 如果不包含架构，移除版本号并添加架构
+                    new_name=$(echo "$file" | sed -E "s/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+/Antigravity Agent_${{ matrix.arch }}/")
+                  fi
+                  if [ "$file" != "$new_name" ]; then
+                    mv "$file" "$new_name"
+                    echo "Renamed dmg: $file -> $new_name"
+                  else
+                    echo "DMG already has correct name: $file"
+                  fi
+                fi
+              done
+            fi
+          fi
 
           # Windows 安装包重命名
           if [ "${{ matrix.platform }}" = "windows-latest" ]; then
-            # Tauri v2 主要生成 MSI 文件
-            cd "$BUNDLE_DIR/msi/"
-            for file in *.msi; do
-              if [ -f "$file" ]; then
-                # 移除版本号，保留架构
-                new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_x64-setup/Antigravity Agent_x64-setup/')
-                if [ "$file" != "$new_name" ]; then
-                  mv "$file" "$new_name"
-                  echo "Renamed MSI: $file -> $new_name"
+            # MSI 文件
+            if [ -d "$BUNDLE_DIR/msi" ]; then
+              cd "$BUNDLE_DIR/msi/"
+              for file in *.msi; do
+                if [ -f "$file" ]; then
+                  new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_x64-setup/Antigravity Agent_x64-setup/')
+                  if [ "$file" != "$new_name" ]; then
+                    mv "$file" "$new_name"
+                    echo "Renamed MSI: $file -> $new_name"
+                  fi
                 fi
-              fi
-            done
+              done
+            fi
 
-            # 处理 NSIS 安装包（如果存在）
-            cd "$BUNDLE_DIR/nsis/"
-            for file in *.zip; do
-              if [ -f "$file" ]; then
-                # 移除版本号，保留架构
-                new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_x64-setup/Antigravity Agent_x64-setup/')
-                if [ "$file" != "$new_name" ]; then
-                  mv "$file" "$new_name"
-                  echo "Renamed NSIS: $file -> $new_name"
+            # NSIS 文件 - 实际生成的是 .exe 文件
+            if [ -d "$BUNDLE_DIR/nsis" ]; then
+              cd "$BUNDLE_DIR/nsis/"
+              for file in *.exe; do
+                if [ -f "$file" ]; then
+                  new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_x64-setup/Antigravity Agent_x64-setup/')
+                  if [ "$file" != "$new_name" ]; then
+                    mv "$file" "$new_name"
+                    echo "Renamed NSIS: $file -> $new_name"
+                  fi
                 fi
-              fi
-            done
+              done
+            fi
           fi
 
-          # Linux AppImage 重命名
+          # Linux 处理
           if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
-            cd "$BUNDLE_DIR/appimage/"
-            # Tauri 生成的 AppImage 文件名
-            for file in antigravity-agent*.AppImage; do
-              if [ -f "$file" ]; then
-                # 重命名为不带版本号的 nightly 版本
-                mv "$file" "antigravity-agent.AppImage.nightly"
-                echo "Renamed AppImage: $file -> antigravity-agent.AppImage.nightly"
-              fi
-            done
-
-            # 如果存在 AppImage.tar.gz（打包的 AppImage），也需要重命名
-            for file in *.tar.gz; do
-              if [ -f "$file" ]; then
-                new_name=$(echo "$file" | sed -E 's/antigravity-agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent/')
-                if [ "$file" != "$new_name" ]; then
-                  mv "$file" "$new_name"
-                  echo "Renamed AppImage tar: $file -> $new_name"
+            # AppImage
+            if [ -d "$BUNDLE_DIR/appimage" ]; then
+              cd "$BUNDLE_DIR/appimage/"
+              for file in *.AppImage; do
+                if [ -f "$file" ]; then
+                  new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent/')
+                  if [ "$file" != "$new_name" ]; then
+                    mv "$file" "${new_name}.AppImage.nightly"
+                    echo "Renamed AppImage: $file -> ${new_name}.AppImage.nightly"
+                  fi
                 fi
-              fi
-            done
-          fi
+              done
+            fi
 
-          # Linux deb 包重命名
-          if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
-            cd "$BUNDLE_DIR/deb/"
-            for file in *.deb; do
-              if [ -f "$file" ]; then
-                # 移除版本号，使用 nightly 标识
-                new_name=$(echo "$file" | sed -E 's/antigravity-agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent_amd64/')
-                if [ "$file" != "$new_name" ]; then
-                  mv "$file" "$new_name"
-                  echo "Renamed: $file -> $new_name"
+            # deb 包
+            if [ -d "$BUNDLE_DIR/deb" ]; then
+              cd "$BUNDLE_DIR/deb/"
+              for file in *.deb; do
+                if [ -f "$file" ]; then
+                  new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent_amd64/')
+                  if [ "$file" != "$new_name" ]; then
+                    mv "$file" "$new_name"
+                    echo "Renamed deb: $file -> $new_name"
+                  fi
                 fi
-              fi
-            done
+              done
+            fi
           fi
 
-      - name: Rename macOS artifacts to include architecture
-        if: startsWith(matrix.platform, 'macos')
-        shell: bash
-        run: |
-          cd src-tauri/target/${{ matrix.target }}/release/bundle/macos/
-          if [ -f "Antigravity Agent.app.tar.gz" ]; then
-            mv "Antigravity Agent.app.tar.gz" "Antigravity Agent_${{ matrix.arch }}.app.tar.gz"
-          fi
-          if [ -f "Antigravity Agent.app.tar.gz.sig" ]; then
-            mv "Antigravity Agent.app.tar.gz.sig" "Antigravity Agent_${{ matrix.arch }}.app.tar.gz.sig"
-          fi
-
-      - name: Upload renamed macOS artifacts
-        if: startsWith(matrix.platform, 'macos')
+      - name: Upload all artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          cd src-tauri/target/${{ matrix.target }}/release/bundle/macos/
-          if [ -f "Antigravity Agent_${{ matrix.arch }}.app.tar.gz" ]; then
-            gh release upload autobuild "Antigravity Agent_${{ matrix.arch }}.app.tar.gz" --clobber
+          echo "=== Starting upload process ==="
+
+          # 获取构建产物目录
+          # 所有平台都使用 target triple
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          echo "Using target path for ${{ matrix.platform }}: $BUNDLE_DIR"
+
+          echo "Bundle directory: $BUNDLE_DIR"
+
+          # 检查文件存在性
+          echo "=== Checking files to upload ==="
+          if [ -d "$BUNDLE_DIR" ]; then
+            echo "Bundle directory contents:"
+            find "$BUNDLE_DIR" -type f | while read file; do
+              echo "  Found: $file"
+            done
+
+            # 上传所有子目录中的文件
+            echo "=== Uploading files ==="
+            find "$BUNDLE_DIR" -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.sig" -o -name "*.dmg" \) | while read file; do
+              echo "Uploading: $file"
+              ls -lh "$file"  # 显示文件大小
+              gh release upload autobuild "$file" --clobber --repo "${{ github.repository }}"
+              echo "✅ Uploaded: $file"
+            done
+          else
+            echo "❌ Bundle directory not found: $BUNDLE_DIR"
+            echo "Available directories:"
+            find src-tauri/target -type d -name "bundle" 2>/dev/null || echo "No bundle directories"
+            exit 1
           fi
-          if [ -f "Antigravity Agent_${{ matrix.arch }}.app.tar.gz.sig" ]; then
-            gh release upload autobuild "Antigravity Agent_${{ matrix.arch }}.app.tar.gz.sig" --clobber
-          fi
-          echo "✅ Uploaded renamed macOS artifacts"
+
+          echo "=== Upload completed ==="
 
       - name: Create Windows Portable Version
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
+          Write-Host "=== Creating Windows Portable Version ==="
+
           $exePath = "src-tauri\target\${{ matrix.target }}\release\antigravity-agent.exe"
           $outputDir = "portable-package"
-          $zipPath = "src-tauri\target\${{ matrix.target }}\release\bundle\Antigravity-Agent-${{ matrix.arch }}-Portable.zip"
-          
+          $bundleDir = "src-tauri\target\${{ matrix.target }}\release\bundle"
+          $zipPath = "$bundleDir\Antigravity-Agent-x86_64-Portable.zip"
+
+          Write-Host "Expected exe path: $exePath"
+          Write-Host "Bundle directory: $bundleDir"
+          Write-Host "Output zip path: $zipPath"
+
+          # 检查 exe 文件是否存在
           if (Test-Path $exePath) {
+            Write-Host "✅ Found exe file"
+            Get-Item $exePath | Select-Object Name, Length
+
             New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
             Copy-Item $exePath "$outputDir\Antigravity Agent.exe"
+
+            # 确保 bundle 目录存在
+            if (!(Test-Path $bundleDir)) {
+              New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
+            }
+
             Compress-Archive -Path "$outputDir\*" -DestinationPath $zipPath -Force
             Remove-Item -Recurse -Force $outputDir
-            Write-Host "✅ Created portable version for nightly"
+
+            if (Test-Path $zipPath) {
+              Write-Host "✅ Created portable version:"
+              Get-Item $zipPath | Select-Object Name, Length
+            } else {
+              Write-Host "❌ Failed to create zip file"
+            }
+          } else {
+            Write-Host "❌ Exe file not found: $exePath"
+            Write-Host "Checking target directory:"
+            if (Test-Path "src-tauri\target\${{ matrix.target }}\release\") {
+              Get-ChildItem "src-tauri\target\${{ matrix.target }}\release"
+            } else {
+              Write-Host "Target directory does not exist"
+            }
           }
 
-      - name: Upload Windows Portable to Nightly Release
+      - name: Upload Windows Portable
         if: matrix.platform == 'windows-latest'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          $zipPath = "src-tauri\target\${{ matrix.target }}\release\bundle\Antigravity-Agent-${{ matrix.arch }}-Portable.zip"
+          Write-Host "=== Uploading Windows Portable Version ==="
+
+          $zipPath = "src-tauri\target\${{ matrix.target }}\release\bundle\Antigravity-Agent-x86_64-Portable.zip"
+
+          Write-Host "Looking for: $zipPath"
+
           if (Test-Path $zipPath) {
-            gh release upload autobuild $zipPath --clobber
-            Write-Host "✅ Uploaded portable version to nightly release"
+            $fileInfo = Get-Item $zipPath
+            Write-Host "✅ Found portable zip:"
+            Write-Host "  Name: $($fileInfo.Name)"
+            Write-Host "  Size: $($fileInfo.Length) bytes"
+
+            gh release upload autobuild $zipPath --clobber --repo "${{ github.repository }}"
+            Write-Host "✅ Uploaded portable version"
+          } else {
+            Write-Host "❌ Portable zip not found"
+            Write-Host "Checking bundle directory contents:"
+            $bundleDir = "src-tauri\target\${{ matrix.target }}\release\bundle"
+            if (Test-Path $bundleDir) {
+              Get-ChildItem $bundleDir
+            } else {
+              Write-Host "Bundle directory does not exist"
+            }
           }
-
-      - name: Upload Windows MSI Installer
-        if: matrix.platform == 'windows-latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-          cd "$BUNDLE_DIR/msi/"
-          for file in *.msi; do
-            if [ -f "$file" ]; then
-              gh release upload autobuild "$file" --clobber
-              echo "✅ Uploaded MSI: $file"
-            fi
-          done
-
-      - name: Upload Windows NSIS Installer (if exists)
-        if: matrix.platform == 'windows-latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-          cd "$BUNDLE_DIR/nsis/"
-          for file in *.zip; do
-            if [ -f "$file" ]; then
-              gh release upload autobuild "$file" --clobber
-              echo "✅ Uploaded NSIS: $file"
-            fi
-          done
-
-      - name: Upload Linux AppImage
-        if: matrix.platform == 'ubuntu-latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-          cd "$BUNDLE_DIR/appimage/"
-
-          # 上传 AppImage 文件
-          if [ -f "antigravity-agent.AppImage.nightly" ]; then
-            gh release upload autobuild "antigravity-agent.AppImage.nightly" --clobber
-            echo "✅ Uploaded AppImage: antigravity-agent.AppImage.nightly"
-          fi
-
-          # 如果存在打包的 AppImage
-          for file in antigravity-agent*.tar.gz; do
-            if [ -f "$file" ]; then
-              gh release upload autobuild "$file" --clobber
-              echo "✅ Uploaded AppImage tar: $file"
-            fi
-          done
-
-      - name: Upload Linux Deb Package
-        if: matrix.platform == 'ubuntu-latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-          cd "$BUNDLE_DIR/deb/"
-          for file in *.deb; do
-            if [ -f "$file" ]; then
-              gh release upload autobuild "$file" --clobber
-              echo "✅ Uploaded deb: $file"
-            fi
-          done
