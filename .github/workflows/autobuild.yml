@@ -18,7 +18,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # 第一步：准备 release（避免并发创建的竞态条件）
+  # 第一步：删除旧 release 和 tag，创建新的 release
   prepare-release:
     runs-on: ubuntu-latest
     steps:
@@ -27,37 +27,47 @@ jobs:
         with:
           ref: dev
 
-      - name: Create or update autobuild release
+      - name: Delete old autobuild release (if exists)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 尝试删除旧的 release
+          gh release delete autobuild --yes --repo "${{ github.repository }}" 2>/dev/null || echo "No existing release to delete"
+          # 尝试删除旧的 tag
+          gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/autobuild" 2>/dev/null || echo "No existing tag to delete"
+          echo "✅ Cleaned up old release and tag"
+
+      - name: Create new autobuild release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: autobuild
           name: 'Antigravity Agent Nightly'
           body: |
             Nightly build from dev branch.
-            
+
             🕐 Last updated: ${{ github.event.head_commit.timestamp }}
             📦 Commit: ${{ github.sha }}
-            
+
             ---
-            
+
             ## 📥 下载安装
-            
+
             ⚠️ **注意**：这是自动构建的测试版本，可能不稳定。建议普通用户使用 [正式发布版本](https://github.com/MonchiLin/antigravity-agent/releases/latest)。
-            
+
             ### Windows
-            - **安装版**（推荐）: `Antigravity Agent_x.x.x_x64-setup.exe` - 支持自动更新
+            - **安装版**（推荐）: `Antigravity Agent_x64-setup.exe` - 支持自动更新
             - **便携版**: `Antigravity-Agent-x86_64-Portable.zip` - 解压即用
-            
+
             ### macOS
-            - **Apple Silicon**: `Antigravity Agent_aarch64.dmg`
-            - **Intel Mac**: `Antigravity Agent_x86_64.dmg`
-            
+            - **Apple Silicon**: `Antigravity Agent_aarch64.app.tar.gz`
+            - **Intel Mac**: `Antigravity Agent_x86_64.app.tar.gz`
+
             ### Linux
-            - **AppImage**: `antigravity-agent_x.x.x_amd64.AppImage` - 通用格式
-            - **Debian/Ubuntu**: `antigravity-agent_x.x.x_amd64.deb`
-            
+            - **AppImage**: `antigravity-agent.AppImage.nightly` - 通用格式
+            - **Debian/Ubuntu**: `antigravity-agent_amd64.deb`
+
             ---
-            
+
             🐛 如果发现问题，请[提交 Issue](https://github.com/MonchiLin/antigravity-agent/issues/new)
           prerelease: true
           draft: false
@@ -71,9 +81,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-13
+          - platform: macos-latest  # Apple Silicon 原生构建
             arch: aarch64
-            runs-on: macos-13
+            runs-on: macos-latest
             target: aarch64-apple-darwin
           - platform: macos-latest  # Intel 构建使用 ARM runner 交叉编译
             arch: x86_64
@@ -162,8 +172,82 @@ jobs:
           releaseDraft: false
           prerelease: true
           includeDebug: false
-          includeRelease: true
+          includeRelease: false  # 禁用自动上传，我们将手动上传重命名后的文件
           args: --target ${{ matrix.target }}
+
+      - name: Remove version numbers from filenames
+        shell: bash
+        run: |
+          # 获取构建产物目录
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+
+          # Windows 安装包重命名
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
+            # Tauri v2 主要生成 MSI 文件
+            cd "$BUNDLE_DIR/msi/"
+            for file in *.msi; do
+              if [ -f "$file" ]; then
+                # 移除版本号，保留架构
+                new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_x64-setup/Antigravity Agent_x64-setup/')
+                if [ "$file" != "$new_name" ]; then
+                  mv "$file" "$new_name"
+                  echo "Renamed MSI: $file -> $new_name"
+                fi
+              fi
+            done
+
+            # 处理 NSIS 安装包（如果存在）
+            cd "$BUNDLE_DIR/nsis/"
+            for file in *.zip; do
+              if [ -f "$file" ]; then
+                # 移除版本号，保留架构
+                new_name=$(echo "$file" | sed -E 's/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_x64-setup/Antigravity Agent_x64-setup/')
+                if [ "$file" != "$new_name" ]; then
+                  mv "$file" "$new_name"
+                  echo "Renamed NSIS: $file -> $new_name"
+                fi
+              fi
+            done
+          fi
+
+          # Linux AppImage 重命名
+          if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
+            cd "$BUNDLE_DIR/appimage/"
+            # Tauri 生成的 AppImage 文件名
+            for file in antigravity-agent*.AppImage; do
+              if [ -f "$file" ]; then
+                # 重命名为不带版本号的 nightly 版本
+                mv "$file" "antigravity-agent.AppImage.nightly"
+                echo "Renamed AppImage: $file -> antigravity-agent.AppImage.nightly"
+              fi
+            done
+
+            # 如果存在 AppImage.tar.gz（打包的 AppImage），也需要重命名
+            for file in *.tar.gz; do
+              if [ -f "$file" ]; then
+                new_name=$(echo "$file" | sed -E 's/antigravity-agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent/')
+                if [ "$file" != "$new_name" ]; then
+                  mv "$file" "$new_name"
+                  echo "Renamed AppImage tar: $file -> $new_name"
+                fi
+              fi
+            done
+          fi
+
+          # Linux deb 包重命名
+          if [ "${{ matrix.platform }}" = "ubuntu-latest" ]; then
+            cd "$BUNDLE_DIR/deb/"
+            for file in *.deb; do
+              if [ -f "$file" ]; then
+                # 移除版本号，使用 nightly 标识
+                new_name=$(echo "$file" | sed -E 's/antigravity-agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent_amd64/')
+                if [ "$file" != "$new_name" ]; then
+                  mv "$file" "$new_name"
+                  echo "Renamed: $file -> $new_name"
+                fi
+              fi
+            done
+          fi
 
       - name: Rename macOS artifacts to include architecture
         if: startsWith(matrix.platform, 'macos')
@@ -219,3 +303,71 @@ jobs:
             gh release upload autobuild $zipPath --clobber
             Write-Host "✅ Uploaded portable version to nightly release"
           }
+
+      - name: Upload Windows MSI Installer
+        if: matrix.platform == 'windows-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          cd "$BUNDLE_DIR/msi/"
+          for file in *.msi; do
+            if [ -f "$file" ]; then
+              gh release upload autobuild "$file" --clobber
+              echo "✅ Uploaded MSI: $file"
+            fi
+          done
+
+      - name: Upload Windows NSIS Installer (if exists)
+        if: matrix.platform == 'windows-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          cd "$BUNDLE_DIR/nsis/"
+          for file in *.zip; do
+            if [ -f "$file" ]; then
+              gh release upload autobuild "$file" --clobber
+              echo "✅ Uploaded NSIS: $file"
+            fi
+          done
+
+      - name: Upload Linux AppImage
+        if: matrix.platform == 'ubuntu-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          cd "$BUNDLE_DIR/appimage/"
+
+          # 上传 AppImage 文件
+          if [ -f "antigravity-agent.AppImage.nightly" ]; then
+            gh release upload autobuild "antigravity-agent.AppImage.nightly" --clobber
+            echo "✅ Uploaded AppImage: antigravity-agent.AppImage.nightly"
+          fi
+
+          # 如果存在打包的 AppImage
+          for file in antigravity-agent*.tar.gz; do
+            if [ -f "$file" ]; then
+              gh release upload autobuild "$file" --clobber
+              echo "✅ Uploaded AppImage tar: $file"
+            fi
+          done
+
+      - name: Upload Linux Deb Package
+        if: matrix.platform == 'ubuntu-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
+          cd "$BUNDLE_DIR/deb/"
+          for file in *.deb; do
+            if [ -f "$file" ]; then
+              gh release upload autobuild "$file" --clobber
+              echo "✅ Uploaded deb: $file"
+            fi
+          done
