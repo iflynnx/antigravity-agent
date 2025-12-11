@@ -7,18 +7,10 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Antigravity 路径配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AntigravityPathConfig {
     /// 用户自定义的 Antigravity 可执行文件路径
     pub custom_executable_path: Option<String>,
-}
-
-impl Default for AntigravityPathConfig {
-    fn default() -> Self {
-        Self {
-            custom_executable_path: None,
-        }
-    }
 }
 
 /// 获取配置文件路径

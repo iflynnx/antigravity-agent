@@ -5,9 +5,6 @@ description = "Antigravity Agent - Account management tool"
 authors = ["Kiki"]
 edition = "2021"
 
-[build-dependencies]
-tauri-build = { version = "2.0", features = [] }
-
 [dependencies]
 tauri = { version = "2.9", features = ["tray-icon", "devtools"] }
 tauri-plugin-shell = "2.3.3"
@@ -33,3 +30,10 @@ chrono = { version = "0.4", features = ["serde"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 regex = "1.10"
 sysinfo = "0.30"
+prost = "0.12"
+log = "0.4.28"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+prost-build = "0.12"
+protoc-bin-vendored = "3"

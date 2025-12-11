@@ -37,7 +37,6 @@ export function AppContent() {
   }, []);
 
   useEffect(() => {
-    antigravityAccount.updateCurrentAccount()
     antigravityAccount.accounts.forEach(user => {
       availableModels.fetchData(user)
     })

@@ -1,3 +1,4 @@
+pub mod account;
 pub mod backup;
 pub mod cleanup;
 pub mod path_config;

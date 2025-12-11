@@ -13,7 +13,7 @@ import {PlatformCommands} from "@/commands/PlatformCommands.ts";
 function App() {
   // ========== 应用状态 ==========
   const [isDetecting, setIsDetecting] = useState(true);
-  
+
   // ========== Hook 集成 ==========
   useDevToolsShortcut();
 
@@ -25,10 +25,19 @@ function App() {
 
   useEffect(() => {
     // 初始化监控（自动启动）
-    dbMonitoringActions.initializeMonitoring();
+    dbMonitoringActions.start();
 
     // 添加事件监听器
-    return dbMonitoringActions.addListener(DATABASE_EVENTS.DATA_CHANGED, antigravityAccount.insertOrUpdateCurrentAccount);
+    const unlisten = dbMonitoringActions.addListener(DATABASE_EVENTS.DATA_CHANGED, antigravityAccount.insertOrUpdateCurrentAccount);
+
+    // 自动刷新一次当前账户
+    antigravityAccount.insertOrUpdateCurrentAccount()
+
+    // 组件卸载时移除监听器
+    return () => {
+      unlisten()
+      dbMonitoringActions.stop()
+    };
   }, []);
 
   // 启动 Antigravity 进程状态自动检查

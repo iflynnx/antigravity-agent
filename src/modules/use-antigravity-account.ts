@@ -1,13 +1,30 @@
 import {create} from 'zustand';
-import {invoke} from '@tauri-apps/api/core';
 import {logger} from '../utils/logger.ts';
-import type {AntigravityCurrentUserInfo, BackupCurrentAccountResult} from '../types/tauri.ts';
+import type {AntigravityCurrentUserInfo} from '../types/tauri.ts';
 import {AccountCommands} from '@/commands/AccountCommands.ts';
 import type {AntigravityAccount, AntigravityAuthInfo} from '@/commands/types/account.types.ts';
-import {BackupCommands} from "@/commands/BackupCommands.ts";
+import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";
 
 // 常量定义
 const FILE_WRITE_DELAY_MS = 500; // 等待文件写入完成的延迟时间
+
+// 将后端解码结果转为前端展示模型
+const toAccount = (info: AntigravityCurrentUserInfo, idx: number): AntigravityAccount => {
+  const email = info.context?.email ?? `unknown_${idx}`;
+  const name = email.split('@')[0] ?? email;
+  const api_key = info.auth?.access_token ?? '';
+
+  return {
+    ...info,
+    id: email || `account_${idx}`,
+    name,
+    email,
+    api_key,
+    profile_url: '', // 目前解码结果无头像，留空
+    created_at: '',
+    last_switched: '',
+  };
+};
 
 // Store 状态
 export interface AntigravityAccountState {
@@ -21,7 +38,6 @@ export interface AntigravityAccountActions {
   delete: (email: string) => Promise<void>;
   insertOrUpdateCurrentAccount: () => Promise<void>;
   switchToAccount: (email: string) => Promise<void>;
-  updateCurrentAccount: () => Promise<AntigravityAuthInfo | null>;
 
   // 批量操作
   clearAllAccounts: () => Promise<void>;
@@ -38,17 +54,12 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
 
   // ============ 基础操作 ============
   delete: async (email: string): Promise<void> => {
-    logger.info('开始删除用户', { module: 'UserManagement', email });
-
     try {
-      // 调用 Tauri 删除命令，与 ManageSection 保持一致
-      await invoke('delete_backup', { name: email });
+      await AccountManageCommands.deleteBackup(email);
 
       // 删除成功后重新获取数据
-      const accounts = await AccountCommands.getAccounts();
+      const accounts = await AccountCommands.getAntigravityAccounts();
       set({ accounts: accounts });
-
-      logger.info('用户删除成功', { module: 'UserManagement', email, remainingUsers: accounts.length });
     } catch (error) {
       logger.error('用户删除失败', {
         module: 'UserManagement',
@@ -60,49 +71,23 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
   },
 
   insertOrUpdateCurrentAccount: async (): Promise<void> => {
-    logger.info('开始备份当前用户', { module: 'UserManagement' });
-
     try {
       // 1. 获取当前 Antigravity 用户信息
-      const currentInfo = await invoke<AntigravityCurrentUserInfo>('get_current_antigravity_info');
-
+      const currentInfo = await AccountCommands.getCurrentInfo();
       // 2. 检查是否有有效的用户信息（通过API Key或用户状态判断）
-      if (currentInfo && (currentInfo.apiKey || currentInfo.userStatusProtoBinaryBase64)) {
-        // 3. 从认证信息中提取邮箱
-        const userEmail = currentInfo.email;
+      if (currentInfo?.auth.access_token) {
+        // 3. 执行备份操作
+        await AccountCommands.backupAntigravityCurrentAccount();
 
-        logger.info('检测到已登录用户，开始备份', {
-          module: 'UserManagement',
-          email: userEmail,
-          hasApiKey: !!currentInfo.apiKey,
-          hasUserStatus: !!currentInfo.userStatusProtoBinaryBase64
-        });
-
-        // 4. 执行备份操作
-        const result = await invoke<BackupCurrentAccountResult>('backup_antigravity_current_account', {
-          email: userEmail
-        });
-
-        // 5. 等待文件写入完成
+        // 4. 等待文件写入完成
         await new Promise(resolve => setTimeout(resolve, FILE_WRITE_DELAY_MS));
 
-        // 6. 重新获取用户列表
-        const accounts = await AccountCommands.getAccounts();
+        // 5. 重新获取用户列表
+        const accountsRaw = await AccountCommands.getAntigravityAccounts();
+        const accounts = accountsRaw.map((info, idx) => toAccount(info, idx));
         set({ accounts: accounts });
-
-        logger.info('当前用户备份成功', {
-          module: 'UserManagement',
-          email: userEmail,
-          result,
-          totalUsers: accounts.length
-        });
       } else {
-        logger.warn('未检测到已登录的用户', {
-          module: 'UserManagement',
-          hasApiKey: !!currentInfo.apiKey,
-          hasUserStatus: !!currentInfo.userStatusProtoBinaryBase64
-        });
-        throw new Error('未检测到已登录的用户');
+        throw new Error('未检测到有效的账户信息');
       }
     } catch (error) {
       logger.error('备份当前用户失败', {
@@ -114,15 +99,9 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
   },
 
   switchToAccount: async (email: string): Promise<void> => {
-    logger.info('开始切换用户', { module: 'UserManagement', email });
-
     try {
       // 调用后端切换用户命令
-      const result = await invoke<string>('switch_to_antigravity_account', {
-        accountName: email
-      });
-
-      logger.info('切换用户成功', { module: 'UserManagement', email, result });
+      await AccountCommands.switchToAccount(email);
     } catch (error) {
       logger.error('切换用户失败', {
         module: 'UserManagement',
@@ -133,36 +112,26 @@ export const useAntigravityAccount = create<AntigravityAccountState & Antigravit
     }
   },
 
-  updateCurrentAccount: async (): Promise<AntigravityAuthInfo | null> => {
-    const currentInfo = await AccountCommands.getCurrentInfo();
-
-    set({ currentAuthInfo: currentInfo });
-
-    return currentInfo;
-  },
-
   // ============ 批量操作 ============
 
   clearAllAccounts: async (): Promise<void> => {
     // 调用清空所有备份的命令
-    await BackupCommands.clearAll();
+    await AccountManageCommands.clearAllBackups();
     // 清空成功后重新获取数据
-    const accounts = await AccountCommands.getAccounts();
+    const accountsRaw = await AccountCommands.getAntigravityAccounts();
+    const accounts = accountsRaw.map((info, idx) => toAccount(info, idx));
     set({ accounts: accounts });
   },
 
   // ============ 查询 ============
   getAccounts: async (): Promise<AntigravityAccount[]> => {
-    logger.info('获取用户列表', { module: 'UserManagement' });
-
     try {
       // 从后端获取账户列表
-      const accounts = await AccountCommands.getAccounts();
+      const accountsRaw = await AccountCommands.getAntigravityAccounts();
+      const accounts = accountsRaw.map((info, idx) => toAccount(info, idx));
 
       // 同步更新 store 中的状态
       set({ accounts: accounts });
-
-      logger.info('获取用户列表成功', { module: 'UserManagement', userCount: accounts.length });
       return accounts;
     } catch (error) {
       logger.error('获取用户列表失败', {

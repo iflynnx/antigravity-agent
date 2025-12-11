@@ -194,7 +194,6 @@ impl AppPaths {
         paths
     }
 
-  
     // Windows 特定的辅助方法
     #[cfg(target_os = "windows")]
     fn get_program_files_dir() -> Option<PathBuf> {

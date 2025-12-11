@@ -1,9 +1,8 @@
 /// 自定义日志写入器，仅对文件输出进行脱敏
 /// 控制台输出保持原始内容
-
 use std::io::{self, Write};
-use tracing_subscriber::fmt::writer::MakeWriter;
 use tracing_appender::rolling::RollingFileAppender;
+use tracing_subscriber::fmt::writer::MakeWriter;
 
 /// 脱敏文件写入器
 pub struct SanitizingFileWriter {
@@ -43,4 +42,3 @@ impl<'a> MakeWriter<'a> for SanitizingFileWriter {
         SanitizingFileWriter::new().expect("Failed to create sanitizing file writer")
     }
 }
-

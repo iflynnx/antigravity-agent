@@ -25,6 +25,7 @@ pub fn log_system_info() {
 }
 
 /// 记录数据库操作
+#[allow(dead_code)]
 pub fn log_database_operation(operation: &str, table: Option<&str>, success: bool) {
     match (table, success) {
         (Some(table), true) => {

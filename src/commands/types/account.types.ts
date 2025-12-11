@@ -1,47 +1,24 @@
-/**
- * Antigravity 账户相关类型定义
- */
+import type { AntigravityCurrentUserInfo } from '../../types/tauri';
 
 /**
- * Antigravity 账户认证信息
- * 注意：后端返回的是动态 JSON (serde_json::Value)，可能包含额外字段
+ * 从 jetskiStateSync 解码出的账户信息（后端直接返回解码结果），
+ * 为前端展示添加了一些派生字段。
+ */
+export type AntigravityAccount = AntigravityCurrentUserInfo & {
+  id: string;
+  name: string;
+  email: string;
+  api_key: string;
+  profile_url: string;
+  created_at: string;
+  last_switched: string;
+};
+
+/**
+ * 账户认证信息（保留扩展字段）
  */
 export interface AntigravityAuthInfo {
-  /** 用户邮箱地址 */
   email?: string;
-
-  /** 数据库文件路径 */
   db_path?: string;
-
-  /** 其他可能的认证相关字段（支持动态扩展） */
   [key: string]: unknown;
-}
-
-/**
- * Antigravity 账户信息
- */
-export interface AntigravityAccount {
-  /** 账户ID */
-  id: string;
-
-  /** 账户名称 */
-  name: string;
-
-  /** 邮箱地址 */
-  email: string;
-
-  /** API密钥或访问令牌 */
-  api_key: string;
-
-  /** Base64 编码的头像URL */
-  profile_url: string;
-
-  /** 编码后的用户设置 */
-  user_settings: string;
-
-  /** 账户创建时间 */
-  created_at: string;
-
-  /** 最后切换时间 */
-  last_switched: string;
 }

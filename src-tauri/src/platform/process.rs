@@ -156,5 +156,5 @@ pub fn matches_antigravity_process_for_debug(
     process_cmd: &str,
     pattern: &ProcessPattern,
 ) -> bool {
-    matches_antigravity_process(process_name, process_cmd, &[pattern.clone()])
+    matches_antigravity_process(process_name, process_cmd, std::slice::from_ref(pattern))
 }

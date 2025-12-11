@@ -5,10 +5,10 @@
 
 import {create} from 'zustand';
 import {open, save} from '@tauri-apps/plugin-dialog';
-import {invoke} from '@tauri-apps/api/core';
+import {readTextFile} from '@tauri-apps/plugin-fs';
 import {logger} from '@/utils/logger.ts';
 import toast from 'react-hot-toast';
-import {BackupCommands} from "@/commands/BackupCommands.ts";
+import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";
 import {BackupData} from "@/commands/types/backup.types.ts";
 import {LoggingCommands} from "@/commands/LoggingCommands.ts";
 
@@ -107,11 +107,9 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
           set({ isImporting: true });
           toast.loading('正在使用 Rust 解密文件...', {duration: 1});
 
-          // 调用后端解密
-          const decryptedJson: string = await invoke('decrypt_config_data', {
-            filePath: pendingImportPath,
-            password
-          });
+          // 读取文件并解密
+          const encryptedFile = await readTextFile(pendingImportPath);
+          const decryptedJson: string = await AccountManageCommands.decryptConfig(encryptedFile, password);
           const configData: EncryptedConfigData = JSON.parse(decryptedJson);
 
           // 验证配置数据格式
@@ -125,7 +123,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
           });
           toast.loading('正在恢复账户数据...', {duration: 1});
 
-          const result = await BackupCommands.restoreFiles(configData.backups);
+          const result = await AccountManageCommands.restoreBackupFiles(configData.backups);
 
           if (result.failed.length > 0) {
             logger.warn('部分文件恢复失败', {
@@ -184,10 +182,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
             configSize
           });
 
-          const encryptedData = await invoke<string>('encrypt_config_data', {
-            jsonData: configJson,
-            password
-          });
+          const encryptedData = await AccountManageCommands.encryptConfig(configJson, password);
 
           // 选择保存位置
           const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
@@ -290,7 +285,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
           toast.loading('正在收集账户数据...', {duration: 1});
 
           // ✅ 获取包含完整内容的备份数据
-          const backupsWithContent = await invoke<BackupData[]>('collect_backup_contents');
+          const backupsWithContent = await AccountManageCommands.collectBackupContents();
 
           if (backupsWithContent.length === 0) {
             logger.warn('没有找到用户信息', {

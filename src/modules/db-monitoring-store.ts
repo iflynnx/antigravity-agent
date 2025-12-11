@@ -8,6 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {listen, UnlistenFn} from '@tauri-apps/api/event';
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
+import {DbMonitorCommands} from "@/commands/DbMonitorCommands.ts";
 
 // 数据库变化事件数据接口
 export interface DatabaseChangeEvent {
@@ -43,10 +44,10 @@ type DatabaseEventListener<T extends keyof DatabaseEventMap> = (data: DatabaseEv
 // 操作接口 - 简化版，移除了设置管理
 interface DbMonitoringActions {
   // 初始化监控（启动时调用）
-  initializeMonitoring: () => Promise<void>;
+  start: () => Promise<void>;
 
   // 停止监听（清理资源）
-  cleanup: () => Promise<void>;
+  stop: () => Promise<void>;
 
   // 添加事件监听器
   addListener: <T extends keyof DatabaseEventMap>(
@@ -59,12 +60,12 @@ interface DbMonitoringActions {
 export const useDbMonitoringStore = create<DbMonitoringActions>()(
   (set, get) => ({
       // 初始化监控（应用启动时调用）
-      initializeMonitoring: async (): Promise<void> => {
+      start: async (): Promise<void> => {
         logger.info('初始化数据库监控', { module: 'DbMonitoringStore' });
 
         try {
           // 清理之前的监听器
-          await get().cleanup();
+          await get().stop();
 
           // 处理数据库变化事件
           const handleDatabaseChange = async (event: any) => {
@@ -75,15 +76,6 @@ export const useDbMonitoringStore = create<DbMonitoringActions>()(
 
             // 解析事件数据：newData, oldData, diff
             const { newData, oldData, diff } = event.payload;
-
-            if (diff) {
-              logger.info('数据库变化摘要', {
-                module: 'DbMonitoringStore',
-                hasChanges: diff.hasChanges,
-                changedFieldsCount: diff.changedFields?.length || 0,
-                summary: diff.summary
-              });
-            }
 
             // 发射内部数据库变化事件
             databaseEventEmitter.emit(DATABASE_EVENTS.DATA_CHANGED, {
@@ -103,7 +95,7 @@ export const useDbMonitoringStore = create<DbMonitoringActions>()(
           globalUnlistenFn = await listen('database-changed', handleDatabaseChange);
 
           // 启动后端监控
-          await invoke('start_database_monitoring');
+          await DbMonitorCommands.start();
 
           logger.info('数据库监控已启动', {
             module: 'DbMonitoringStore'
@@ -117,7 +109,7 @@ export const useDbMonitoringStore = create<DbMonitoringActions>()(
       },
 
       // 清理资源
-      cleanup: async (): Promise<void> => {
+      stop: async (): Promise<void> => {
         if (globalUnlistenFn) {
           try {
             await globalUnlistenFn();

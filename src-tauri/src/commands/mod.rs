@@ -1,10 +1,8 @@
+pub mod account_commands;
 /// 命令模块统一导出
 /// 按功能分组管理所有 Tauri 命令
-// 备份相关命令
-pub mod backup_commands;
-
 // 账户管理命令
-pub mod account_commands;
+pub mod account_manage_commands;
 
 // 进程管理命令
 pub mod process_commands;
@@ -30,7 +28,7 @@ pub mod db_monitor_commands;
 
 // 重新导出所有命令，保持与 main.rs 的兼容性
 pub use account_commands::*;
-pub use backup_commands::*;
+pub use account_manage_commands::*;
 pub use db_monitor_commands::*;
 pub use logging_commands::*;
 pub use platform_commands::*;

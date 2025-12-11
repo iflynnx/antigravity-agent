@@ -22,24 +22,4 @@ export class LoggingCommands {
   static async writeTextFile(path: string, content: string): Promise<string> {
     return invoke('write_text_file', { path, content });
   }
-
-  /**
-   * 加密配置数据（使用 XOR 算法）
-   * @param jsonData JSON 格式的配置数据
-   * @param password 加密密码
-   * @returns Base64 编码的加密数据
-   */
-  static async encryptConfig(jsonData: string, password: string): Promise<string> {
-    return invoke('encrypt_config_data', { json_data: jsonData, password });
-  }
-
-  /**
-   * 解密配置数据（使用 XOR 算法）
-   * @param encryptedData Base64 编码的加密数据
-   * @param password 解密密码
-   * @returns JSON 格式的配置数据
-   */
-  static async decryptConfig(encryptedData: string, password: string): Promise<string> {
-    return invoke('decrypt_config_data', { encrypted_data: encryptedData, password });
-  }
 }

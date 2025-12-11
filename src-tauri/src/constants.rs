@@ -54,8 +54,7 @@ pub mod database {
 }
 
 /// 路径常量（保留部分可能用到的）
-pub mod paths {
-}
+pub mod paths {}
 
 /// 窗口状态限制
 pub mod window_limits {}

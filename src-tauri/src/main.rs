@@ -3,7 +3,7 @@
 
 use std::fs;
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::prelude::*;
+use tracing_subscriber::{prelude::*, EnvFilter};
 
 // Modules
 mod antigravity;
@@ -12,6 +12,7 @@ mod config_manager;
 mod constants;
 mod directories;
 mod platform;
+mod proto;
 mod system_tray;
 mod utils;
 mod window;
@@ -28,9 +29,12 @@ pub use state::{AntigravityAccount, AppState, ProfileInfo};
 // Use commands
 use crate::commands::*;
 
-
 /// 初始化双层日志系统（控制台 + 文件）
 fn init_tracing() -> WorkerGuard {
+    // 日志过滤器：默认 info，降低 h2/hyper 噪音（可被 RUST_LOG 覆盖）
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,h2=warn,hyper=warn"));
+
     // 创建日志目录
     let log_dir = crate::directories::get_log_directory();
     if let Err(e) = fs::create_dir_all(&log_dir) {
@@ -38,12 +42,13 @@ fn init_tracing() -> WorkerGuard {
     }
 
     // 创建滚动文件写入器（带脱敏）
-    let file_writer = crate::utils::sanitizing_layer::SanitizingFileWriter::new()
-        .expect("无法创建文件写入器");
+    let file_writer =
+        crate::utils::sanitizing_layer::SanitizingFileWriter::new().expect("无法创建文件写入器");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_writer);
 
     // 设置控制台和文件双层输出
     tracing_subscriber::registry()
+        .with(env_filter)
         .with(
             tracing_subscriber::fmt::layer()
                 .with_writer(std::io::stdout) // 控制台输出，不脱敏
@@ -69,7 +74,7 @@ fn main() {
 
     tracing::info!(target: "app::startup", "🚀 启动 Antigravity Agent");
     tracing::info!(target: "app::startup", "📝 日志系统已初始化（控制台 + 文件）");
-  tracing::info!(target: "app::startup", "📁 日志目录: {}", crate::directories::get_log_directory().display());
+    tracing::info!(target: "app::startup", "📁 日志目录: {}", crate::directories::get_log_directory().display());
 
     // 记录系统启动信息
     crate::utils::tracing_config::log_system_info();
@@ -85,16 +90,14 @@ fn main() {
         .manage(AppState::default())
         .setup(|app| setup::init(app))
         .invoke_handler(tauri::generate_handler![
-            get_recent_accounts,
             collect_backup_contents,
             restore_backup_files,
             delete_backup,
             clear_all_backups,
-            // Antigravity 相关命令
-            switch_antigravity_account,
+            // 账户基础命令
             get_antigravity_accounts,
-            get_current_antigravity_info,
-            backup_antigravity_current_account,
+            get_current_antigravity_account_info,
+            save_antigravity_current_account,
             restore_antigravity_account,
             switch_to_antigravity_account,
             clear_all_antigravity_data,
