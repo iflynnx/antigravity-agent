@@ -1,5 +1,7 @@
 # Antigravity Agent
 
+> !!重要: 1.4.0 版本, 本项目彻底进行了重构, 若您之前使用的是旧版本, 请先在老版本备份账户数据后, 然后重新导入!!
+
 > 开箱即用的 Antigravity 账户管理程序。
 
 ![dashborad.png](screenshots/dashboard.png)
