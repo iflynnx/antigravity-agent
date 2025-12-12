@@ -3,6 +3,7 @@ import { AccountSessionListCard } from './AccountSessionListCard';
 import {motion, AnimatePresence, Variants} from 'framer-motion';
 import { AnimatedGridPattern } from "@/components/base-ui/AnimatedGridPattern.tsx";
 import { maskEmail, maskName } from "@/utils/string-masking.ts";
+import {UserTier} from "@/modules/use-account-addition-data.ts";
 
 export interface AccountSessionListAccountItem {
   geminiQuota: number;
@@ -10,6 +11,7 @@ export interface AccountSessionListAccountItem {
   email: string;
   nickName: string;
   userAvatar: string;
+  tier: UserTier;
   apiKey: string;
 }
 
@@ -73,9 +75,7 @@ export function AccountSessionList({
       animate="show"
     >
       {/* 背景组件通常设为 absolute，不参与流式布局动画 */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-xl">
-        <AnimatedGridPattern />
-      </div>
+      <AnimatedGridPattern />
 
       {/* AnimatePresence 用于处理元素被删除时的离场动画 */}
       <AnimatePresence mode="popLayout">
@@ -90,6 +90,7 @@ export function AccountSessionList({
               geminiQuota={account.geminiQuota}
               claudeQuota={account.claudeQuota}
               userAvatar={account.userAvatar}
+              tier={account.tier}
               isCurrentUser={currentUserEmail === account.email}
               email={maskEmail(account.email)}
               nickName={maskName(account.nickName)}

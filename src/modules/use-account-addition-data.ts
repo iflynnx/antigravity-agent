@@ -13,6 +13,9 @@ type Actions = {
   fetchData: (antigravityAccount: AntigravityAccount) => Promise<void>
 }
 
+// 暂时不知道 ultra 定义, 先模糊匹配,
+export type UserTier = 'free-tier' | 'g1-pro-tier' | 'g1-ultra-tier';
+
 export interface AccountAdditionData {
   geminiQuote: number
   claudeQuote: number
@@ -44,6 +47,11 @@ export const useAccountAdditionData = create<State & Actions>((setState, getStat
       const refreshTokenResponse = await CloudCodeAPI.refreshAccessToken(antigravityAccount.auth.id_token);
       // 更新一下内存里面的 access token, 这里就不写入本地了
       antigravityAccount.auth.access_token = refreshTokenResponse.access_token;
+    }
+
+    // 先模糊匹配下 tier 的定义, 因为我也知不道具体是啥
+    if (antigravityAccount.context.plan.slug.includes("ultra")) {
+      antigravityAccount.context.plan.slug = "g1-ultra-tier";
     }
 
     codeAssistResponse = await CloudCodeAPI.loadCodeAssist(antigravityAccount.auth.access_token);

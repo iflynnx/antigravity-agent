@@ -47,6 +47,8 @@ const mockAccounts: AccountSessionListAccountItem[] = [
     userAvatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Admin',
     geminiQuota: 0.85,
     claudeQuota: 0.92,
+    tier: 'g1-pro-tier',
+    apiKey: 'sk_mock_admin',
   },
   {
     nickName: 'Jason Bourne',
@@ -54,6 +56,8 @@ const mockAccounts: AccountSessionListAccountItem[] = [
     userAvatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Jason',
     geminiQuota: 0.15, // 低配额
     claudeQuota: 0.40,
+    tier: 'free-tier',
+    apiKey: 'sk_mock_jason',
   },
   {
     nickName: 'Unknown Guest',
@@ -61,8 +65,21 @@ const mockAccounts: AccountSessionListAccountItem[] = [
     userAvatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Guest',
     geminiQuota: -1,   // 未知配额
     claudeQuota: 0.05, // 极低配额
+    tier: 'g1-ultra-tier',
+    apiKey: 'sk_mock_guest',
   },
 ];
+
+const gridAccounts: AccountSessionListAccountItem[] = Array.from({ length: 9 }).map((_, i) => {
+  const base = mockAccounts[i % mockAccounts.length];
+  const [name, domain] = base.email.split('@');
+  return {
+    ...base,
+    email: `${name}+${i}@${domain}`, // 生成唯一 email，避免 React key 冲突
+    nickName: `${base.nickName} #${i + 1}`,
+    apiKey: `${base.apiKey}_${i}`,
+  };
+});
 
 // --- Stories ---
 
@@ -73,6 +90,17 @@ const mockAccounts: AccountSessionListAccountItem[] = [
 export const Default: Story = {
   args: {
     accounts: mockAccounts,
+  },
+};
+
+/**
+ * 高亮当前用户：
+ * currentUserEmail 命中某个账号时，该卡片应显示“当前”徽标并禁用操作。
+ */
+export const WithCurrentUser: Story = {
+  args: {
+    accounts: mockAccounts,
+    currentUserEmail: mockAccounts[0].email,
   },
 };
 
@@ -92,11 +120,7 @@ export const EmptyState: Story = {
  */
 export const GridWrapLayout: Story = {
   args: {
-    // 复制 3 份数据生成 9 个卡片
-    accounts: [...mockAccounts, ...mockAccounts, ...mockAccounts].map((acc, i) => ({
-      ...acc,
-      id: `user_gen_${i}`, // 确保 key 唯一
-    })),
-    currentUserEmail: 'user_gen_0',
+    accounts: gridAccounts,
+    currentUserEmail: gridAccounts[0].email,
   },
 };

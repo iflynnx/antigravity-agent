@@ -1,6 +1,9 @@
 ﻿import type { Meta, StoryObj } from '@storybook/react';
 import {AccountSessionListCard} from "@/components/business/AccountSessionListCard.tsx";
 import {fn} from "storybook/test";
+import type { UserTier } from "@/modules/use-account-addition-data.ts";
+
+const tierOptions: UserTier[] = ['free-tier', 'g1-pro-tier', 'g1-ultra-tier'];
 
 // 定义元数据
 const meta = {
@@ -29,6 +32,11 @@ const meta = {
       control: { type: 'range', min: -1, max: 1, step: 0.01 },
       description: 'Claude 使用配额 (0-1, 或 -1 代表未知)',
     },
+    tier: {
+      control: { type: 'select' },
+      options: tierOptions,
+      description: '账户级别',
+    },
     userAvatar: {
       control: 'text',
       description: '用户头像 URL',
@@ -43,6 +51,7 @@ const meta = {
     onSelect: fn(),
     onSwitch: fn(),
     onDelete: fn(),
+    tier: 'free-tier',
   },
 } satisfies Meta<typeof AccountSessionListCard>;
 
@@ -58,6 +67,7 @@ export const Default: Story = {
     geminiQuota: 0.45,
     claudeQuota: 0.72,
     isCurrentUser: false,
+    tier: 'g1-pro-tier',
   },
 };
 
@@ -71,6 +81,7 @@ export const CurrentUser: Story = {
     geminiQuota: 0.12,
     claudeQuota: 0.30,
     isCurrentUser: true,
+    tier: 'g1-ultra-tier',
   },
 };
 
@@ -84,6 +95,7 @@ export const UnknownUsage: Story = {
     geminiQuota: -1,
     claudeQuota: -1,
     isCurrentUser: false,
+    tier: 'free-tier',
   },
 };
 
@@ -96,5 +108,6 @@ export const HighUsage: Story = {
     geminiQuota: 0.98,
     claudeQuota: 1.0,
     isCurrentUser: false,
+    tier: 'g1-pro-tier',
   },
 };

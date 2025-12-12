@@ -1,8 +1,7 @@
 import React, {useEffect, useState} from "react";
-import type {AntigravityAccount} from "@/commands/types/account.types.ts";
 import BusinessUserDetail from "@/components/business/AccountDetailModal.tsx";
 import {useAntigravityAccount, useCurrentAntigravityAccount} from "@/modules/use-antigravity-account.ts";
-import {useAccountAdditionData} from "@/modules/use-account-addition-data.ts";
+import {useAccountAdditionData, UserTier} from "@/modules/use-account-addition-data.ts";
 import {useTrayMenu} from "@/hooks/use-tray-menu.ts";
 
 import BusinessConfirmDialog from "@/components/business/ConfirmDialog.tsx";
@@ -107,7 +106,8 @@ export function AppContent() {
       email: account.context.email,
       nickName: account.context.plan_name,
       userAvatar: accountAdditionDatum?.userAvatar ?? "",
-      apiKey: account.auth.access_token
+      apiKey: account.auth.access_token,
+      tier: account.context.plan.slug as UserTier,
     }
   })
 
