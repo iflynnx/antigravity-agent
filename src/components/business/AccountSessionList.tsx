@@ -1,7 +1,7 @@
 ﻿import React from 'react';
 import { AccountSessionListCard } from './AccountSessionListCard';
-import {motion, AnimatePresence, Variants} from 'framer-motion';
-import { AnimatedGridPattern } from "@/components/base-ui/AnimatedGridPattern.tsx";
+import {motion, AnimatePresence, Variants} from 'motion/react';
+import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern.tsx";
 import { maskEmail, maskName } from "@/lib/string-masking.ts";
 import {UserTier} from "@/modules/use-account-addition-data.ts";
 

@@ -203,6 +203,13 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
             isLoading={isSilentStartLoading}
           />
         </div>
+
+        <div className="h-px bg-gray-100 dark:bg-gray-800"/>
+
+        <div className="space-y-1">
+          <a target={"_blank"} href={"https://github.com/MonchiLin/antigravity-agent/issues"}>遇到问题/请求新功能</a>
+        </div>
+
       </div>
     </Modal>
   );

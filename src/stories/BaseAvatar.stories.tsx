@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { BaseAvatar } from '@/components/base-ui/BaseAvatar.tsx';
+import { Avatar } from '@/components/ui/avatar.tsx';
 
 const meta = {
-  title: 'Base UI/BaseAvatar',
-  component: BaseAvatar,
+  title: 'Base UI/Avatar',
+  component: Avatar,
   parameters: {
     layout: 'centered',
     backgrounds: {
@@ -32,7 +32,7 @@ const meta = {
   args: {
     size: 48,
   },
-} satisfies Meta<typeof BaseAvatar>;
+} satisfies Meta<typeof Avatar>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

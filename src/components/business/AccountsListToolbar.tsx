@@ -1,21 +1,24 @@
 import React from 'react';
-import { ArrowUpDown, Search, X } from 'lucide-react';
-import { cn } from '@/lib/utils.ts';
-import { BaseInput } from '@/components/base-ui/BaseInput';
-import type { UserTier } from '@/modules/use-account-addition-data.ts';
-import { Select as AntSelect } from 'antd';
+import {ArrowUpDown, Search, X} from 'lucide-react';
+import {cn} from '@/lib/utils.ts';
+import {BaseInput} from '@/components/base-ui/BaseInput';
+import type {UserTier} from '@/modules/use-account-addition-data.ts';
+import {Select as AntSelect} from 'antd';
+import {LineShadowText} from "@/components/ui/line-shadow-text.tsx";
+import UpdateBadge from "@/components/business/UpdateBadge.tsx";
 
 export type ListSortKey = 'name' | 'claude' | 'gemini' | 'tier';
 export type ListToolbarValue = {
   query: string;
   sortKey: ListSortKey;
+  tiers: UserTier[] | null;
 };
 
 const defaultSortOptions: Array<{ value: ListSortKey; label: string }> = [
   { value: 'name', label: '用户名首字母' },
   { value: 'claude', label: 'Claude 配额' },
   { value: 'gemini', label: 'Gemini 配额' },
-  { value: 'tier', label: '层次' },
+  { value: 'tier', label: '账户层次' },
 ];
 
 const tierUiMap: Record<UserTier, { label: string; accentClass: string }> = {
@@ -45,44 +48,53 @@ export interface BusinessListToolbarProps {
   /** 任一项变更时回调（返回完整状态） */
   onChange: (next: ListToolbarValue) => void;
   className?: string;
+  // 为 null 时，显示所有层次
+  tiers?: UserTier[] | null;
 }
 
 /**
  * Business Component: ListToolbar
  * 列表顶部工具栏（标题 + 搜索 + 自定义动作/过滤器插槽）
  */
-const BusinessListToolbar: React.FC<BusinessListToolbarProps> = ({
+const AccountsListToolbar: React.FC<BusinessListToolbarProps> = ({
   total,
   query,
   sortKey,
   onChange,
   className,
+  tiers,
 }) => {
-  const titleText = '账户备份';
-  const [internalTiers, setInternalTiers] = React.useState<UserTier[]>([]);
+  const normalizedTiers = tiers && tiers.length > 0 ? tiers : null;
+  const selectedTiers = normalizedTiers ?? [];
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({ query: e.target.value, sortKey });
+    onChange({ query: e.target.value, sortKey, tiers: normalizedTiers });
   };
 
   const handleClearSearch = () => {
-    onChange({ query: '', sortKey });
+    onChange({ query: '', sortKey, tiers: normalizedTiers });
   };
 
   const handleSortChange = (next: ListSortKey) => {
-    onChange({ query, sortKey: next });
+    onChange({ query, sortKey: next, tiers: normalizedTiers });
   };
 
   const toggleTier = (tier: UserTier) => {
-    const exists = internalTiers.includes(tier);
+    const exists = selectedTiers.includes(tier);
     const nextTiers = exists
-      ? internalTiers.filter(t => t !== tier)
-      : [...internalTiers, tier];
-    setInternalTiers(nextTiers);
+      ? selectedTiers.filter(t => t !== tier)
+      : [...selectedTiers, tier];
+
+    const nextNormalized =
+      nextTiers.length === 0 || nextTiers.length === allTiers.length
+        ? null
+        : nextTiers;
+
+    onChange({ query, sortKey, tiers: nextNormalized });
   };
 
   const clearTiers = () => {
-    setInternalTiers([]);
+    onChange({ query, sortKey, tiers: null });
   };
 
   const containerClasses = [
@@ -91,15 +103,24 @@ const BusinessListToolbar: React.FC<BusinessListToolbarProps> = ({
     'backdrop-blur-sm shadow-sm',
   ];
 
-  const titleClass = 'text-sm font-semibold text-slate-900 dark:text-slate-50';
-  const metaClass = 'text-xs text-slate-500 dark:text-slate-400';
-
   return (
     <div className={cn(...containerClasses, className)}>
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <h2 className={cn(titleClass, 'truncate')}>{titleText}</h2>
-          <span className={cn(metaClass, 'whitespace-nowrap')}>共 {total} 条</span>
+      <a target={"_blank"} href={"https://github.com/MonchiLin/antigravity-agent"} className="text-4xl leading-none font-semibold tracking-tighter text-balance cursor-pointer">
+        <span>Antigravity</span>
+        {/* padding 修复截断 */}
+        <LineShadowText className={"italic pr-2 pb-1"}>Agent</LineShadowText>
+        <UpdateBadge/>
+      </a>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="inline-flex items-center w-fit rounded-full border border-slate-200 bg-slate-100 p-0.5 transition-colors hover:border-slate-300">
+          {/* 左侧：标签部分 (较弱的视觉) */}
+          <span className="px-2 py-0.5 text-xs font-medium text-slate-600">
+          账户
+        </span>
+          <span className="flex min-w-[20px] items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-xs font-bold text-slate-800 shadow-sm">
+          {total}
+        </span>
         </div>
 
         <BaseInput
@@ -122,9 +143,6 @@ const BusinessListToolbar: React.FC<BusinessListToolbarProps> = ({
           containerClassName="w-64 !space-y-0 ml-2"
           className="py-1.5 h-8 text-sm"
         />
-      </div>
-
-      <div className="flex items-center gap-2 shrink-0">
         {/* 层次筛选：分段按钮 */}
         <div
           className={cn(
@@ -137,7 +155,7 @@ const BusinessListToolbar: React.FC<BusinessListToolbarProps> = ({
             onClick={clearTiers}
             className={cn(
               'px-2.5 py-1 rounded-md text-xs font-medium transition-colors',
-              internalTiers.length === 0
+              selectedTiers.length === 0
                 ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-300 shadow-sm'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-900/60'
             )}
@@ -145,7 +163,7 @@ const BusinessListToolbar: React.FC<BusinessListToolbarProps> = ({
             全部
           </button>
           {allTiers.map(tier => {
-            const isActive = internalTiers.includes(tier);
+            const isActive = selectedTiers.includes(tier);
             const { label, accentClass } = tierUiMap[tier];
             return (
               <button
@@ -194,4 +212,4 @@ const BusinessListToolbar: React.FC<BusinessListToolbarProps> = ({
   );
 };
 
-export default BusinessListToolbar;
+export default AccountsListToolbar;

@@ -1,6 +1,8 @@
 import {invoke} from '@tauri-apps/api/core';
 import {logger} from '../lib/logger.ts';
 import toast from 'react-hot-toast';
+import {AccountCommands} from "@/commands/AccountCommands.ts";
+import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";
 
 /**
  * Antigravity 服务 - 处理 Antigravity 相关操作
@@ -21,7 +23,7 @@ export class AntigravityService {
         module: 'AntigravityService',
         action: 'call_backend_command'
       });
-      const result = await invoke('sign_in_new_antigravity_account') as string;
+      const result = await AccountManageCommands.signInNewAntigravityAccount();
       logger.info('后端命令执行成功', {
         module: 'AntigravityService',
         action: 'backend_command_success',

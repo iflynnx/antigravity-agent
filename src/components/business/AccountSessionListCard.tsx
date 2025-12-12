@@ -1,9 +1,9 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { cn } from "@/lib/utils.ts"; // 假设你有一个用于合并类名的工具函数
-import { Button, Space } from "antd";
-import { BaseAvatar } from "@/components/base-ui/BaseAvatar.tsx"; // 假设你的头像组件路径
-import { Crown, Gem } from 'lucide-react';
+import {motion} from 'motion/react';
+import {cn} from "@/lib/utils.ts"; // 假设你有一个用于合并类名的工具函数
+import {Avatar} from "@/components/ui/avatar.tsx"; // 假设你的头像组件路径
+import {ArrowLeftRight, Crown, Gem, Trash2} from 'lucide-react';
+import {BaseButton} from "@/components/base-ui/BaseButton.tsx";
 
 type UserTier = 'free-tier' | 'g1-pro-tier' | 'g1-ultra-tier';
 
@@ -77,21 +77,17 @@ export function AccountSessionListCard(props: UserSessionCardProps) {
       onClick={props.onSelect}
       // 1. 基础 Tailwind 类：负责布局、内边距、圆角和过渡
       className={cn(
-        "w-[320px] rounded-2xl p-6 border cursor-pointer transition-all duration-300 hover:-translate-y-1",
-        // 添加一个通用的 hover 悬浮阴影叠加
+        "w-[320px] rounded-2xl p-6 border cursor-pointer",
         "hover:shadow-xl"
       )}
-      // 2. 核心：使用 style 属性注入复杂的背景和阴影样式
-      style={{
-        ...currentVisualStyles,
-      }}
+      style={currentVisualStyles}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       {/* 头部区域 */}
       <header className="flex items-center gap-4 mb-4 relative">
-        <BaseAvatar
+        <Avatar
           className={cn(
             "h-12 w-12 rounded-full object-cover border-2 transition-all duration-300 shrink-0 ring-2 ring-offset-2",
             // 微调 Ultra 模式下头像的边框，让它更通透，配合背景
@@ -163,28 +159,29 @@ export function AccountSessionListCard(props: UserSessionCardProps) {
 
       {/* 底部交互区域 */}
       <div className="mt-6 flex items-center justify-center relative">
-        <Space.Compact>
-          <Button
-            onClick={e => {
-              e.stopPropagation();
-              props.onSwitch()
-            }}
-            disabled={props.isCurrentUser}
-            type="primary"
-          >
-            切换
-          </Button>
-          <Button
-            danger
-            onClick={e => {
-              e.stopPropagation()
-              props.onDelete()
-            }}
-            disabled={props.isCurrentUser}
-          >
-            删除
-          </Button>
-        </Space.Compact>
+        <BaseButton
+          onClick={e => {
+            e.stopPropagation();
+            props.onSwitch()
+          }}
+          disabled={props.isCurrentUser}
+          variant="outline"
+          leftIcon={<ArrowLeftRight className={"w-3 h-3"} />}
+        >
+
+          使用
+        </BaseButton>
+        <BaseButton
+          onClick={e => {
+            e.stopPropagation()
+            props.onDelete()
+          }}
+          disabled={props.isCurrentUser}
+          variant="ghost"
+          rightIcon={<Trash2 className={"w-3 h-3"} />}
+        >
+          删除
+        </BaseButton>
       </div>
     </motion.div>
   );

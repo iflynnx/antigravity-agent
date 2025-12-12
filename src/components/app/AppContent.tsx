@@ -9,6 +9,13 @@ import toast from 'react-hot-toast';
 import {maskEmail} from "@/lib/string-masking.ts";
 import {useAppGlobalLoader} from "@/modules/use-app-global-loader.ts";
 import {AccountSessionList, AccountSessionListAccountItem} from "@/components/business/AccountSessionList.tsx";
+import AccountsListToolbar, {type ListToolbarValue} from "@/components/business/AccountsListToolbar.tsx";
+
+const tierRank: Record<UserTier, number> = {
+  'g1-ultra-tier': 0,
+  'g1-pro-tier': 1,
+  'free-tier': 2,
+};
 
 export function AppContent() {
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
@@ -17,6 +24,11 @@ export function AppContent() {
   const availableModels = useAccountAdditionData();
   const currentAntigravityAccount = useCurrentAntigravityAccount();
   const appGlobalLoader = useAppGlobalLoader();
+  const [condition, setCondition] = useState<ListToolbarValue>({
+    sortKey: 'tier',
+    query: '',
+    tiers: null,
+  });
 
   // 初始化托盘菜单更新
   useTrayMenu();
@@ -111,11 +123,58 @@ export function AppContent() {
     }
   })
 
+  const normalizedQuery = condition.query.trim().toLowerCase();
+  const visibleAccounts = accounts
+    .filter(account => {
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        account.email.toLowerCase().includes(normalizedQuery) ||
+        account.nickName?.toLowerCase().includes(normalizedQuery);
+
+      const matchesTier =
+        condition.tiers == null ||
+        condition.tiers.length === 0 ||
+        condition.tiers.includes(account.tier);
+
+      return matchesQuery && matchesTier;
+    })
+    .sort((a, b) => {
+      const nameA = a.nickName || a.email;
+      const nameB = b.nickName || b.email;
+      const byName = nameA.localeCompare(nameB);
+
+      switch (condition.sortKey) {
+        case 'name':
+          return byName;
+        case 'claude': {
+          const diff = (b.claudeQuota ?? -1) - (a.claudeQuota ?? -1);
+          return diff !== 0 ? diff : byName;
+        }
+        case 'gemini': {
+          const diff = (b.geminiQuota ?? -1) - (a.geminiQuota ?? -1);
+          return diff !== 0 ? diff : byName;
+        }
+        case 'tier': {
+          const diff = tierRank[a.tier] - tierRank[b.tier];
+          return diff !== 0 ? diff : byName;
+        }
+        default:
+          return byName;
+      }
+    });
+
   return (
     <>
       <section className="flex flex-col relative flex-1">
+        <AccountsListToolbar
+          tiers={condition.tiers}
+          query={condition.query}
+          sortKey={condition.sortKey}
+          total={visibleAccounts.length}
+          onChange={setCondition}
+        />
         <AccountSessionList
-          accounts={accounts}
+          accounts={visibleAccounts}
           onSwitch={handleSwitchAccount}
           onDelete={handleDeleteBackup}
           onSelect={handleUserClick}

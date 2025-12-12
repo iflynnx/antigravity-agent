@@ -1,13 +1,7 @@
-/**
- * 数据库监控 Store - 简化版
- * 智能监控现在是默认功能，自动启动
- */
-
-import { create } from 'zustand';
-import { invoke } from '@tauri-apps/api/core';
+import {create} from 'zustand';
 import {listen, UnlistenFn} from '@tauri-apps/api/event';
-import { EventEmitter } from 'events';
-import { logger } from '../lib/logger.ts';
+import {EventEmitter} from 'events';
+import {logger} from '../lib/logger.ts';
 import {DbMonitorCommands} from "@/commands/DbMonitorCommands.ts";
 
 // 数据库变化事件数据接口

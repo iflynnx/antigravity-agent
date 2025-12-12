@@ -6,7 +6,7 @@ import {cn} from '@/lib/utils.ts';
 import {logger} from '@/lib/logger.ts';
 import {Modal} from "antd";
 import {AccountSessionListAccountItem} from "@/components/business/AccountSessionList.tsx";
-import {BaseAvatar} from "@/components/base-ui/BaseAvatar.tsx";
+import {Avatar} from "@/components/ui/avatar.tsx";
 
 interface BusinessUserDetailProps {
   isOpen: boolean;
@@ -98,7 +98,7 @@ const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({
       <div className="p-5 space-y-6 max-h-[70vh] overflow-y-auto">
         {/* 用户头像和基本信息 */}
         <div className="flex items-center gap-4">
-          <BaseAvatar src={account.userAvatar} alt={account.nickName} />
+          <Avatar src={account.userAvatar} alt={account.nickName} />
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {account.nickName}
@@ -116,7 +116,7 @@ const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({
           label="API 密钥"
           value={"****"}
           copyable
-          fieldName="api_key"
+          fieldName="apiKey"
         />
       </div>
     </Modal>

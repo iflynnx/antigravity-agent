@@ -4,8 +4,7 @@ import {useAntigravityAccount} from './modules/use-antigravity-account.ts';
 import {DATABASE_EVENTS, useDbMonitoringStore} from './modules/db-monitoring-store';
 import {useAntigravityIsRunning} from './hooks/use-antigravity-is-running.ts';
 import {Toaster} from 'react-hot-toast';
-import AppToolbar from './components/app/AppToolbar.tsx';
-import {TooltipProvider} from './components/ui/tooltip';
+import AppDock from './components/app/AppDock.tsx';
 import {AppContent} from "@/components/app/AppContent.tsx";
 import {AppLoader} from "@/components/app/AppLoader.tsx";
 import {PlatformCommands} from "@/commands/PlatformCommands.ts";
@@ -82,10 +81,8 @@ function App() {
   }
 
   return <>
-    <TooltipProvider>
-      <AppToolbar />
-      <AppContent />
-    </TooltipProvider>
+    <AppDock />
+    <AppContent />
     <Toaster
       position="bottom-right"
       reverseOrder={false}

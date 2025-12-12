@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import BusinessListToolbar, { type ListToolbarValue } from '@/components/business/ListToolbar.tsx';
+import AccountsListToolbar, { type ListToolbarValue } from '@/components/business/AccountsListToolbar.tsx';
 
 const StatefulToolbar: React.FC<{ total: number; initial?: Partial<ListToolbarValue> }> = ({
   total,
@@ -9,14 +9,16 @@ const StatefulToolbar: React.FC<{ total: number; initial?: Partial<ListToolbarVa
   const [value, setValue] = React.useState<ListToolbarValue>({
     query: '',
     sortKey: 'name',
+    tiers: null,
     ...initial,
   });
 
   return (
-    <BusinessListToolbar
+    <AccountsListToolbar
       total={total}
       query={value.query}
       sortKey={value.sortKey}
+      tiers={value.tiers}
       onChange={setValue}
     />
   );

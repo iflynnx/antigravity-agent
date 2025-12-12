@@ -8,10 +8,10 @@ export interface BaseAvatarProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * BaseUI: BaseAvatar
+ * BaseUI: Avatar
  * Aceternity 风格的基础头像组件，默认 48x48，支持图片与炫光渐变占位。
  */
-const BaseAvatar = React.forwardRef<HTMLDivElement, BaseAvatarProps>(
+const Avatar = React.forwardRef<HTMLDivElement, BaseAvatarProps>(
   ({ className, src, alt = 'avatar', size = 48, style, ...props }, ref) => {
     const [hasError, setHasError] = React.useState(false);
     const dimension = size || 48;
@@ -88,6 +88,6 @@ const BaseAvatar = React.forwardRef<HTMLDivElement, BaseAvatarProps>(
   }
 );
 
-BaseAvatar.displayName = 'BaseAvatar';
+Avatar.displayName = 'Avatar';
 
-export { BaseAvatar };
+export { Avatar };
